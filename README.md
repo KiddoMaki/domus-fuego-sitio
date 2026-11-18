@@ -1,71 +1,74 @@
-# Domus Fuego — Sitio web y catálogo de demostración
+# Domus Fuego — Sitio web + pedidos y reservas (demo con persistencia real)
 
-> **Estado:** frontend estático de demostración. Sin backend, sin pagos reales y sin reservas reales.
-> Basado en el brief `DOMUS_FOGO_LOGICA_NEGOCIO_Y_CATALOGO_PARA_AGENTE.md` y la identidad descrita en
-> `GUIA_NUEVO_ECOMMERCE_MVC_CORS_CORREGIDO.md` (arquitectura MVC propuesta para una fase con backend, aún no aprobada).
+> **Estado:** frontend + backend funcionando de punta a punta. Catálogo, pedidos y reservas se
+> guardan en **Neon (PostgreSQL)** usando tu esquema `db/schema.sql` (DOMUS.sql). Productos,
+> precios y disponibilidad siguen siendo **DEMO** pendientes de confirmación del propietario.
+> Sin pagos en línea (las ventas se generan en caja, tabla `venta`/`caja_sesion`).
 
-## Qué es
-
-Sitio del restaurante **Domus Fuego** (parrilla, steakhouse y BBQ): historia de marca, carta de la casa,
-carrito/pedido de demostración, formulario de reserva simulado y contacto.
-
-## Hechos del PDF vs. propuestas (IMPORTANTE)
-
-**Hechos declarados en el material de marca:** nombre «Domus Fuego», tagline «El punto de encuentro donde
-dos culturas se fusionan a través del fuego», enfoque en cocina al fuego/leña, Instagram `@domusfuego`,
-dirección impresa «García Moreno E2-55 y, 170901 Quito» (incompleta, por confirmar), paleta conceptual
-BLACK / RED DEEP / WHITE / GOLD.
-
-**Propuestas editoriales (NO son la carta oficial):** todos los productos, precios, disponibilidad,
-combos, cócteles y horarios mostrados en el sitio. Están marcados en la interfaz como
-«Menú de demostración; productos, precios y disponibilidad por confirmar». Los precios se configuran en un
-único archivo (`js/app.js`, arreglo `PRODUCTS`).
-
-## Estructura
+## Arquitectura (MVC, guía `GUIA_NUEVO_ECOMMERCE_MVC_CORS_CORREGIDO.md`)
 
 ```text
-index.html              # Sitio completo (landing, menú/catálogo, carrito demo, reserva, contacto)
-styles.css              # Estilos (oscuro premium, dorado, accesible)
-js/app.js               # Catálogo demo + carrito (localStorage) + formularios simulados
-assets/DFLOGO.svg       # Logo provisional (generado; reemplazar por el oficial con derechos de uso)
-GUIA_NUEVO_ECOMMERCE_MVC_CORS_CORREGIDO.md   # Guía de la fase con backend (Netlify + Neon), no implementada
-DOMUS_FOGO_LOGICA_NEGOCIO_Y_CATALOGO_PARA_AGENTE.md  # Brief de negocio y catálogo propuesto
-PENDIENTES_NEGOCIO.md   # Preguntas para el propietario
+public/                 Vista: HTML semántico y accesible
+  index.html            Landing + menú/catálogo + carrito + reserva
+  styles.css            Tema premium oscuro (dorado, contraste AA)
+  js/app.js             Consume /api/*; carrito en localStorage (total real lo calcula el servidor)
+netlify/functions/      Controladores REST (Netlify Functions, TypeScript-free .mjs)
+  products.mjs          GET /api/products (?category=, ?q=, ?meta=categories) y ?id=
+  orders.mjs            POST /api/orders (crea pedido + pedido_detalle) · GET /api/orders?id=
+  reservations.mjs      POST /api/reservations (asigna mesa por capacidad y disponibilidad) · GET ?id=
+  _shared/              Modelo: db.mjs (pool, driver @neondatabase/serverless), repositories,
+                        Factory, OrderBuilder, middleware (CORS, JSON, validación, errores)
+db/schema.sql           Tu esquema completo (35 tablas, 4 vistas, constraints incl. EXCLUDE gist)
+db/seed_demo.sql        SEED DEMO — carta propuesta, NO oficial (ver PENDIENTES_NEGOCIO.md)
+tests/                  node --test (OrderBuilder, middleware)
 ```
+
+Mapa al esquema DOMUS:
+- Catálogo = `item` (tipo_item='venta') → `item_presentacion` (es_venta) → `precio_venta` (vigente) y `categoria_item`.
+- Pedido web = `pedido` (estado 'abierto') + `pedido_detalle` (precio copiado al momento). **No** crea `venta`:
+  la venta se cierra en caja con `id_caja_sesion`.
+- Reserva = `reserva` + asignación automática de `mesa` (capacidad ≥ comensales, sin solape con
+  reservas pendientes/confirmadas en la misma fecha y hora). Sin disponibilidad → **409**.
+- Sin tabla de reseñas: `DOMUS.sql` no la incluye, así que **no** hay reseñas (no se inventó DDL).
 
 ## Uso local
 
-Cualquier servidor estático sirve el sitio, por ejemplo:
-
 ```sh
-python3 -m http.server 8080
-# abrir http://localhost:8080
+npm install
+# .env con DATABASE_URL (pooler) — nunca se commitea (está en .gitignore)
+npm run dev        # netlify dev → http://localhost:8888
+npm test           # 8 pruebas unitarias
 ```
 
-No hay dependencias ni build.
+## Producción
 
-## Accesibilidad
+- Netlify (sitio y Functions): https://domus-fuego-sitio.netlify.app
+- `DATABASE_URL`, `PUBLIC_SITE_URL`, `CORS_ALLOWED_ORIGINS` configuradas como variables de entorno en Netlify.
+- Despliegue: `netlify deploy --prod`
+- Neon: proyecto `ECOMERCE-OPTIMIZACION` (branch `main`, `neondb`), **solo** el esquema DOMUS + seed DEMO.
 
-- `lang="es"`, un `h1` por vista, enlaces «Saltar al contenido», foco visible (`:focus-visible`),
-  `aria-live="polite"` en carrito/estados, navegación completa por teclado, contraste AA y
-  `prefers-reduced-motion` respetado.
+## Decisiones y limitaciones
 
-## Limitaciones conocidas
+- Se usa `@neondatabase/serverless` (443/HTTPS-WSS) en lugar de `pg` sobre 5432: el runner de esta
+  máquina/red no alcanza el puerto 5432 y en serverless es más robusto.
+- `dns.setDefaultResultOrder('ipv4first')` en `db.mjs` evita `EAI_AGAIN` en redes IPv6-preferentes sin ruta.
+- Carrito en `localStorage` (como el concepto original); el total que manda el navegador **no** se confía:
+  el servidor recalcula precios desde `precio_venta`.
+- Reservas y pedidos son **solicitudes pendientes**, no confirmaciones operativas del restaurante.
+- Sin autenticación, sin pagos, sin panel admin. Ver `PENDIENTES_NEGOCIO.md`.
+- GitHub Pages fue desactivado; el sitio vive en Netlify.
 
-- Reservas y pedidos son **simulaciones locales** (localStorage); no se envían a ningún lado.
-- El carrito no persiste entre dispositivos ni genera pedidos reales.
-- No hay autenticación, pagos ni panel administrativo.
-- La dirección y datos de contacto impresos en el PDF están sin confirmar (ver `PENDIENTES_NEGOCIO.md`).
+## Verificación realizada
 
-## Publicación (GitHub Pages)
+- `npm test`: 8/8 pasan.
+- `netlify dev` local: front 200; `GET /api/products?meta=categories` 200; catálogo por categoría/búsqueda 200;
+  `POST /api/orders` crea pedido (#total correcto, 22.50 USD) y `GET /api/orders?id=1` lo devuelve;
+  `POST /api/reservations` asigna mesa (#1 → mesa 3, cap. 4); validaciones 400/422 funcionan; datos de prueba borrados tras verificar.
+- Netlify API: deploy `ready` en producción (Front y Functions). **No se pudo abrir la URL de producción
+  desde esta máquina** (la red bloquea el egreso a `*.netlify.app`); verificar manualmente en un navegador.
 
-1. `git init && git add . && git commit -m "feat: sitio demo Domus Fuego"`
-2. Crear el repo en GitHub y `git push -u origin main`
-3. GitHub → Settings → Pages → Source: rama `main`, carpeta `/ (root)`
+## Documentación de marca / negocio
 
-## Fase 2 (con backend, NO implementada)
-
-La guía `GUIA_NUEVO_ECOMMERCE_MVC_CORS_CORREGIDO.md` describe la arquitectura objetivo
-(Netlify Functions + Neon/PostgreSQL, MVC, API REST `/api/products|orders|reviews`, patrones
-Singleton/Factory/Repository/Builder). Requiere aprobación del propietario, cuenta de Neon y de Netlify,
-y el esquema SQL definitivo. No se implementó por ahora.
+- `DOMUS_FOGO_LOGICA_NEGOCIO_Y_CATALOGO_PARA_AGENTE.md` — brief de negocio y catálogo propuesto.
+- `GUIA_NUEVO_ECOMMERCE_MVC_CORS_CORREGIDO.md` — guía de arquitectura seguida.
+- `PENDIENTES_NEGOCIO.md` — preguntas para el propietario (carta real, precios, reservas, etc.).

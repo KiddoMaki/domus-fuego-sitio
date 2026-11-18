@@ -178,6 +178,8 @@
                     <input class="form-control" id="reservationTime" type="time" name="hora" required />
                   </div>
                 </div>
+                <label class="form-label mt-3" for="reservationContact">Contacto (teléfono o correo)</label>
+                <input class="form-control" id="reservationContact" type="text" name="contacto" placeholder="0991234567 o correo@dominio.com" autocomplete="tel" required />
                 <label class="form-label mt-3" for="reservationGuests">Número de personas</label>
                 <select class="form-select" id="reservationGuests" name="personas" required>
                   <option value="2">2 personas</option>
@@ -234,9 +236,27 @@
                 <div><dt>Subtotal</dt><dd id="cartSubtotal">$0.00</dd></div>
                 <div class="cart-total"><dt>Total</dt><dd id="cartTotal">$0.00</dd></div>
               </dl>
+              <button id="checkoutButton" class="btn btn-danger full-width mb-2" type="button">Confirmar pedido</button>
               <button id="clearCart" class="btn btn-secondary full-width" type="button">Vaciar carrito</button>
             </aside>
           </div>
+
+          <dialog id="checkoutDialog" aria-labelledby="checkoutTitle">
+            <form id="checkoutForm" class="checkout-form">
+              <h2 id="checkoutTitle">Confirmar tu pedido</h2>
+              <label class="form-label" for="checkoutName">Nombre completo</label>
+              <input class="form-control mb-2" id="checkoutName" name="nombre" type="text" autocomplete="name" required />
+              <label class="form-label" for="checkoutPhone">Teléfono</label>
+              <input class="form-control mb-2" id="checkoutPhone" name="telefono" type="tel" autocomplete="tel" placeholder="0991234567" />
+              <label class="form-label" for="checkoutEmail">Correo (opcional si ya diste teléfono)</label>
+              <input class="form-control mb-3" id="checkoutEmail" name="email" type="email" autocomplete="email" placeholder="correo@dominio.com" />
+              <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger">Enviar pedido</button>
+                <button type="button" id="cancelCheckout" class="btn btn-secondary">Cancelar</button>
+              </div>
+              <div class="checkout-feedback mt-2" id="checkoutFeedback" role="status" aria-live="polite"></div>
+            </form>
+          </dialog>
 
           <div class="menu-columns">
             <div class="menu-column">

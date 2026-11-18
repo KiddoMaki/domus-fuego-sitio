@@ -1,0 +1,15 @@
+{
+  "name": "domus-fuego-sitio",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "node -e \"process.stdout.write('static\\n')\"",
+    "test": "node --test",
+    "seed": "node db/seed.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.1",
+    "ws": "^8.23.0"
+  }
+}

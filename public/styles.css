@@ -1190,3 +1190,18 @@ p {
 @media (min-width: 992px) {
   .store-layout { grid-template-columns: minmax(0, 1.6fr) minmax(16rem, 1fr); }
 }
+
+/* ===== Checkout (dialog) ===== */
+dialog#checkoutDialog {
+  max-width: 26rem;
+  width: calc(100% - 2rem);
+  padding: 1.5rem;
+  border: 1px solid var(--gold);
+  border-radius: 1rem;
+  background: var(--panel-strong);
+  color: var(--text);
+}
+dialog#checkoutDialog::backdrop { background: rgba(0, 0, 0, 0.7); }
+.checkout-form h2 { margin-top: 0; color: var(--gold-soft); font-size: 1.3rem; }
+.checkout-form .form-control { min-height: 44px; }
+.checkout-feedback { color: var(--gold-soft); }

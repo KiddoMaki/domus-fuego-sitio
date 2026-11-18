@@ -1,0 +1,25 @@
+[build]
+  publish = "public"
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/products/:id"
+  to = "/.netlify/functions/products?id=:id"
+  status = 200
+
+[[redirects]]
+  from = "/api/orders/:id"
+  to = "/.netlify/functions/orders?id=:id"
+  status = 200
+
+[[redirects]]
+  from = "/api/reservations/:id"
+  to = "/.netlify/functions/reservations?id=:id"
+  status = 200
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
