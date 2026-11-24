@@ -15,7 +15,7 @@
 | Health check de la API | https://domus-fuego-sitio.netlify.app/api/health |
 | API Express local | http://localhost:3000/api (`npm run dev:api`) |
 | Proyecto en Netlify | https://app.netlify.com/projects/domus-fuego-sitio |
-| Deploy actual | https://app.netlify.com/projects/domus-fuego-sitio/deploys/6b05b1cb2c6a5153c15b166c |
+| Deploy actual | https://app.netlify.com/projects/domus-fuego-sitio/deploys/6b05b63ee8f06e677cf92a5f |
 | Logs de Functions | https://app.netlify.com/projects/domus-fuego-sitio/logs/functions |
 | Repositorio en GitHub | https://github.com/KiddoMaki/domus-fuego-sitio |
 | Neon Console | https://console.neon.tech/ — proyecto `empty-voice-61657813`, base `domus_fuego`, rama `production` |
@@ -161,7 +161,10 @@ recepciones del detalle). El botón *Nueva línea* del detalle precarga automát
 - Producción: `/`, `/admin.html`, `/js/admin.js`, `/assets/admin.css`, `/js/app.js` y `/assets/styles.css`
   responden 200; todos los `/api/admin/*` (overview, item-unidades, data, tables, inventario,
   compras, producción, ventas, finanzas, auditoría, logs, reservas, pedidos y usuarios) responden 200
-  con token de administrador; sin token responde 401. Deploy: `6b05b1cb2c6a5153c15b166c`.
+  con token de administrador; sin token responde 401. Deploy: `6b05b63ee8f06e677cf92a5f`.
+- Menú lateral verificado en producción: 11 módulos desplegables y 92 opciones; `Compras &
+  Proveedores` abre proveedores, órdenes, detalle de órdenes, recepciones y detalle de recepciones.
+  El explorador de `orden_compra` muestra 42 filas y **Ver detalle** filtra su detalle por FK.
 - Comboboxes verificados en `/api/admin/data/item/schema`: `id_categoria`, `id_unidad_base`,
   `id_unidad_compra` e `id_unidad_venta` llegan con opciones reales; `factor_compra` y
   `factor_venta` se marcan como calculados y no se envían desde el formulario.
