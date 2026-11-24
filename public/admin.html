@@ -29,67 +29,9 @@
             </button>
         </div>
 
-        <div class="nav-section-title" id="navModulesHeading">Módulos Administrativos</div>
-        <ul class="nav-menu" role="tablist" aria-labelledby="navModulesHeading">
-            <li class="nav-item" role="presentation">
-                <button id="tab-dashboard" role="tab" aria-selected="true" aria-controls="dashboard" class="nav-link active" onclick="switchTab('dashboard', this)">
-                    <i class="fa-solid fa-chart-line" aria-hidden="true"></i> Resumen Ejecutivo
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button role="tab" aria-selected="false" aria-controls="inventario" class="nav-link" onclick="switchTab('inventario', this)">
-                    <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> Catálogo e Items
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button role="tab" aria-selected="false" aria-controls="compras" class="nav-link" onclick="switchTab('compras', this)">
-                    <i class="fa-solid fa-truck-ramp-box" aria-hidden="true"></i> Compras & Proveedores
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button role="tab" aria-selected="false" aria-controls="produccion" class="nav-link" onclick="switchTab('produccion', this)">
-                    <i class="fa-solid fa-kitchen-set" aria-hidden="true"></i> Producción & Recetas
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button role="tab" aria-selected="false" aria-controls="sala" class="nav-link" onclick="switchTab('sala', this)">
-                    <i class="fa-solid fa-chair" aria-hidden="true"></i> Mesas & Reservas
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button role="tab" aria-selected="false" aria-controls="ventas" class="nav-link" onclick="switchTab('ventas', this)">
-                    <i class="fa-solid fa-cash-register" aria-hidden="true"></i> Pedidos, Ventas & Caja
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button role="tab" aria-selected="false" aria-controls="contabilidad" class="nav-link" onclick="switchTab('contabilidad', this)">
-                    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Finanzas & Gastos
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button role="tab" aria-selected="false" aria-controls="er_model" class="nav-link" onclick="switchTab('er_model', this)">
-                    <i class="fa-solid fa-project-diagram" aria-hidden="true"></i> Modelo Entidad-Relación
-                </button>
-            </li>
-
-            <li class="nav-item" role="presentation">
-                <button role="tab" aria-selected="false" aria-controls="usuarios" class="nav-link" onclick="switchTab('usuarios', this)">
-                    <i class="fa-solid fa-users-gear" aria-hidden="true"></i> Usuarios & Roles
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button role="tab" aria-selected="false" aria-controls="catalogos" class="nav-link" onclick="switchTab('catalogos', this)">
-                    <i class="fa-solid fa-database" aria-hidden="true"></i> Catálogos y Tablas
-                </button>
-            </li>
-
-            <div class="nav-section-title" id="navSecurityHeading" style="margin-top: 15px;">Seguridad & Control</div>
-            <li class="nav-item" role="presentation">
-                <button role="tab" aria-selected="false" aria-controls="auditoria" class="nav-link audit-special" onclick="switchTab('auditoria', this)">
-                    <i class="fa-solid fa-shield-halved" style="color: var(--color-gold);" aria-hidden="true"></i> Auditoría & Bitácora
-                </button>
-            </li>
-        </ul>
+        <!-- El menú lateral se genera desde admin.js: cada módulo es un desplegable
+             con un submenú por tabla/CRUD y por vista especial. -->
+        <div id="sidebarNav"></div>
 
         <div class="user-profile-badge">
             <div class="avatar" aria-label="Avatar Administrador">AD</div>
@@ -150,7 +92,7 @@
         <div class="content-scrollable" id="contenidoPrincipal" aria-busy="true">
 
             <!-- 1. DASHBOARD -->
-            <section id="dashboard" class="module-view active" role="tabpanel" aria-labelledby="tab-dashboard">
+            <section id="dashboard" class="module-view active" role="tabpanel" aria-label="Resumen Ejecutivo">
                 <div class="metrics-grid">
                     <div class="metric-card">
                         <div class="metric-title">Ventas registradas <i class="fa-solid fa-receipt" aria-hidden="true"></i></div>
@@ -515,6 +457,21 @@
                         </table>
                     </div>
                 </div>
+            </section>
+
+            <!-- VISTA DINÁMICA: se llena con la tabla/vista elegida en el menú lateral -->
+            <section id="tableExplorer" class="module-view" role="tabpanel" aria-live="polite">
+                <div class="table-card" id="tableExplorerCard">
+                    <div class="card-header-bar">
+                        <h2 id="tableExplorerTitle"><i class="fa-solid fa-table" aria-hidden="true"></i> Explorador de tablas</h2>
+                        <button type="button" class="btn-gold" id="tableExplorerNew" hidden>
+                            <i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo registro
+                        </button>
+                    </div>
+                    <p class="explorer-note" id="tableExplorerNote"></p>
+                    <div id="tableExplorerTable"></div>
+                </div>
+                <div id="tableExplorerDetail"></div>
             </section>
 
         </div>

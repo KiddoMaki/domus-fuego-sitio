@@ -116,12 +116,21 @@ Cuentas de prueba: administrador `kiddo@domusfuego.local` / `1234` (rol `ADMINIS
 cliente `ana@example.com` / `1234` (rol `CLIENTE`). Al iniciar sesión como administrador,
 la SPA abre `/admin.html`; los clientes vuelven a Reservas o a la vista pendiente.
 
-El panel precarga todos los módulos antes de mostrarlos: cambiar de pestaña no vuelve a consultar
-la API ni muestra valores demo. La pestaña activa se conserva al recargar (`sessionStorage`). En
+El panel precarga todos los módulos antes de mostrarlos: cambiar de vista no vuelve a consultar
+la API ni muestra valores demo. La vista activa se conserva al recargar (`sessionStorage`). En
 **Mesas & Reservas**, modificar el combo de estado revela un botón **Actualizar estado**; el cambio
 solo se guarda al pulsarlo. El panel y el sitio público incluyen controles de texto grande, alto
 contraste, reducción de movimiento y velocidad de animaciones, con foco visible y objetivos táctiles
 amplios en móvil.
+
+**Menú lateral desplegable.** Cada módulo (Compras & Proveedores, Producción & Recetas, etc.) es un
+botón con `aria-expanded` que abre un submenú con una opción por tabla/CRUD y por vista. Por ejemplo,
+**Compras & Proveedores** contiene *Resumen de compras, Proveedores, Órdenes de compra, Detalle de
+órdenes de compra, Recepciones* y *Detalle de recepciones*. Al elegir una tabla se abre un explorador
+genérico con todas sus columnas y **Nuevo / Editar / Eliminar**; las filas de tablas maestro tienen
+además **Ver detalle**, que filtra la tabla hija por la llave foránea (OC → detalle de OC →
+recepciones del detalle). El botón *Nueva línea* del detalle precarga automáticamente esa llave.
+**Catálogos y Tablas** reúne las 38 tablas administrables en un solo desplegable con filtro.
 
 ## Producción
 

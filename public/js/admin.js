@@ -1,7 +1,8 @@
 // Panel administrativo de Domus Fuego.
 // La interfaz viene del repositorio domus-admin; aquí se conecta a /api/admin.
-// Todos los datos se precargan una sola vez: cambiar de pestaña solo renderiza
+// Todos los datos se precargan una sola vez: cambiar de vista solo renderiza
 // el cache, sin peticiones ni valores demostrativos que "cambien" de un módulo a otro.
+// El menú lateral es desplegable: cada módulo abre sus CRUDs y vistas reales.
 
 const titles = {
     'dashboard': 'Resumen Ejecutivo',
@@ -17,6 +18,137 @@ const titles = {
     'catalogos': 'Módulo: Catálogos y Tablas'
 };
 
+// Las 38 tablas permitidas por ADMIN_TABLES en el backend, con etiqueta legible.
+const TABLE_LABELS = Object.freeze({
+    caja_sesion: 'Sesiones de caja',
+    categoria_gasto: 'Categorías de gasto',
+    categoria_item: 'Categorías de ítems',
+    cliente: 'Clientes',
+    costo_receta: 'Costos de recetas',
+    costo_receta_detalle: 'Detalle de costos de receta',
+    gasto_operativo: 'Gastos operativos',
+    item: 'Productos / Ítems',
+    item_presentacion: 'Presentaciones',
+    item_proveedor: 'Productos por proveedor',
+    lote_inventario: 'Lotes de inventario',
+    merma: 'Mermas',
+    mesa: 'Mesas',
+    movimiento_contable: 'Movimientos contables',
+    movimiento_inventario: 'Movimientos de inventario',
+    orden_compra: 'Órdenes de compra',
+    orden_compra_detalle: 'Detalle de órdenes de compra',
+    orden_produccion: 'Órdenes de producción',
+    orden_produccion_detalle: 'Detalle de órdenes de producción',
+    pago: 'Pagos',
+    pedido: 'Pedidos',
+    pedido_detalle: 'Detalle de pedidos',
+    precio_venta: 'Precios de venta',
+    proveedor: 'Proveedores',
+    recepcion: 'Recepciones',
+    recepcion_detalle: 'Detalle de recepciones',
+    receta: 'Recetas',
+    receta_detalle: 'Detalle de recetas',
+    reserva: 'Reservas',
+    reserva_detalle: 'Detalle de reservas',
+    roles: 'Roles',
+    rolesxusuario: 'Roles por usuario',
+    tipo_movimiento: 'Tipos de movimiento',
+    tipo_movimiento_contable: 'Tipos de movimiento contable',
+    unidad_medida: 'Unidades de medida',
+    usuario: 'Usuarios (acceso)',
+    usuarios: 'Usuarios (perfil)',
+    venta: 'Ventas',
+});
+const ALL_TABLES = Object.keys(TABLE_LABELS);
+
+// Tablas incluidas en el desplegable de cada módulo.
+const moduleTables = Object.freeze({
+    inventario: ['categoria_item', 'item', 'item_presentacion', 'precio_venta',
+        'unidad_medida', 'proveedor', 'item_proveedor', 'lote_inventario', 'movimiento_inventario'],
+    compras: ['proveedor', 'orden_compra', 'orden_compra_detalle', 'recepcion', 'recepcion_detalle'],
+    produccion: ['receta', 'receta_detalle', 'costo_receta', 'costo_receta_detalle',
+        'orden_produccion', 'orden_produccion_detalle', 'merma', 'tipo_movimiento'],
+    sala: ['cliente', 'mesa', 'reserva', 'reserva_detalle'],
+    ventas: ['caja_sesion', 'pedido', 'pedido_detalle', 'venta', 'pago'],
+    contabilidad: ['categoria_gasto', 'gasto_operativo', 'tipo_movimiento_contable',
+        'movimiento_contable', 'tipo_movimiento'],
+    usuarios: ['usuario', 'usuarios', 'roles', 'rolesxusuario', 'cliente'],
+});
+const tablesFor = (module) => (moduleTables[module] || [])
+    .map((table) => ({ label: TABLE_LABELS[table] || table, table }));
+
+// Relaciones maestro → detalle: habilitan el botón "Ver detalle" en cada fila.
+const DETAIL_MAP = Object.freeze({
+    orden_compra: { table: 'orden_compra_detalle', fk: 'id_orden_compra' },
+    orden_compra_detalle: { table: 'recepcion_detalle', fk: 'id_oc_detalle' },
+    recepcion: { table: 'recepcion_detalle', fk: 'id_recepcion' },
+    pedido: { table: 'pedido_detalle', fk: 'id_pedido' },
+    reserva: { table: 'reserva_detalle', fk: 'id_reserva' },
+    receta: { table: 'receta_detalle', fk: 'id_receta' },
+    costo_receta: { table: 'costo_receta_detalle', fk: 'id_costo_receta' },
+    orden_produccion: { table: 'orden_produccion_detalle', fk: 'id_orden_produccion' },
+});
+
+// Configuración del menú: cada módulo es un desplegable con vistas + tablas.
+const NAV_GROUPS = [
+    {
+        id: 'navModulesHeading', heading: 'Módulos Administrativos', modules: [
+            { key: 'dashboard', label: 'Resumen Ejecutivo', icon: 'fa-chart-line', children: [
+                { label: 'Indicadores y últimos movimientos', view: 'dashboard' },
+            ] },
+            { key: 'inventario', label: 'Catálogo e Items', icon: 'fa-boxes-stacked', children: [
+                { label: 'Resumen de inventario', view: 'inventario' },
+                { label: 'Unidades por producto (vista)', view: 'itemUnits' },
+                ...tablesFor('inventario'),
+            ] },
+            { key: 'compras', label: 'Compras & Proveedores', icon: 'fa-truck-ramp-box', children: [
+                { label: 'Resumen de compras', view: 'compras' },
+                ...tablesFor('compras'),
+            ] },
+            { key: 'produccion', label: 'Producción & Recetas', icon: 'fa-kitchen-set', children: [
+                { label: 'Resumen de producción', view: 'produccion' },
+                ...tablesFor('produccion'),
+            ] },
+            { key: 'sala', label: 'Mesas & Reservas', icon: 'fa-chair', children: [
+                { label: 'Resumen de reservas y mesas', view: 'sala' },
+                ...tablesFor('sala'),
+            ] },
+            { key: 'ventas', label: 'Pedidos, Ventas & Caja', icon: 'fa-cash-register', children: [
+                { label: 'Resumen de ventas', view: 'ventas' },
+                ...tablesFor('ventas'),
+            ] },
+            { key: 'contabilidad', label: 'Finanzas & Gastos', icon: 'fa-scale-balanced', children: [
+                { label: 'Resumen financiero', view: 'contabilidad' },
+                ...tablesFor('contabilidad'),
+            ] },
+            { key: 'er_model', label: 'Modelo Entidad-Relación', icon: 'fa-project-diagram', children: [
+                { label: 'Diagrama del esquema', view: 'er_model' },
+            ] },
+            { key: 'usuarios', label: 'Usuarios & Roles', icon: 'fa-users-gear', children: [
+                { label: 'Resumen de usuarios', view: 'usuarios' },
+                ...tablesFor('usuarios'),
+            ] },
+            { key: 'catalogos', label: 'Catálogos y Tablas', icon: 'fa-database', children: [
+                { label: 'Vista general de todas las tablas', view: 'catalogos' },
+                ...ALL_TABLES.map((table) => ({ label: TABLE_LABELS[table], table })),
+            ] },
+        ],
+    },
+    {
+        id: 'navSecurityHeading', heading: 'Seguridad & Control', modules: [
+            { key: 'auditoria', label: 'Auditoría & Bitácora', icon: 'fa-shield-halved', audit: true, children: [
+                { label: 'Verificación del esquema', view: 'auditoria' },
+                { label: 'Bitácora de eventos', view: 'logs' },
+            ] },
+        ],
+    },
+];
+
+const VIEW_REGISTRY = Object.create(null);
+const ACTIVE_VIEW_KEY = 'domusfuego-admin-active-view';
+let currentView = null;
+let currentDetail = null;
+
 function toggleSidebar(open) {
     const sidebar = document.getElementById('mainSidebar');
     const backdrop = document.getElementById('sidebarBackdrop');
@@ -29,35 +161,104 @@ function toggleSidebar(open) {
     }
 }
 
-function activateModule(moduleKey, triggerBtn) {
-    document.querySelectorAll('.module-view').forEach((el) => el.classList.remove('active'));
-    document.querySelectorAll('.nav-link').forEach((btn) => {
-        btn.classList.remove('active');
-        btn.setAttribute('aria-selected', 'false');
-    });
-    const target = document.getElementById(moduleKey);
-    if (target) target.classList.add('active');
-    const bc = document.getElementById('moduleBreadcrumb');
-    if (bc) bc.textContent = titles[moduleKey] || 'Módulo Administrativo';
-    const button = triggerBtn || document.querySelector(`.nav-link[aria-controls="${moduleKey}"]`);
-    if (button) {
-        button.classList.add('active');
-        button.setAttribute('aria-selected', 'true');
-    }
-    if (titles[moduleKey]) sessionStorage.setItem(ACTIVE_TAB_KEY, moduleKey);
+function setDropdown(button, open) {
+    if (!button) return;
+    button.setAttribute('aria-expanded', String(open));
+    button.classList.toggle('open', open);
+    const submenu = document.getElementById(button.getAttribute('aria-controls'));
+    if (submenu) submenu.hidden = !open;
 }
 
-function switchTab(moduleKey, triggerBtn) {
-    activateModule(moduleKey, triggerBtn);
+function expandModule(moduleKey) {
+    setDropdown(document.querySelector(`.nav-dropdown-toggle[data-module="${moduleKey}"]`), true);
+}
+
+function renderSidebar() {
+    const host = document.getElementById('sidebarNav');
+    if (!host) return;
+    host.innerHTML = NAV_GROUPS.map((group) => `
+        <div class="nav-section-title" id="${esc(group.id)}">${esc(group.heading)}</div>
+        <ul class="nav-menu" aria-labelledby="${esc(group.id)}">
+            ${group.modules.map((mod) => `
+                <li class="nav-item nav-dropdown">
+                    <button type="button" class="nav-link nav-dropdown-toggle${mod.audit ? ' audit-special' : ''}"
+                            data-module="${esc(mod.key)}" aria-expanded="false" aria-controls="submenu-${esc(mod.key)}">
+                        <i class="fa-solid ${esc(mod.icon)}" aria-hidden="true"></i>
+                        <span>${esc(mod.label)}</span>
+                        <i class="fa-solid fa-chevron-down nav-chevron" aria-hidden="true"></i>
+                    </button>
+                    <ul class="nav-submenu" id="submenu-${esc(mod.key)}" hidden>
+                        ${mod.children.map((child) => {
+                            const key = child.table
+                                ? `table:${mod.key}:${child.table}`
+                                : `view:${child.view || mod.key}`;
+                            VIEW_REGISTRY[key] = { ...child, module: mod.key, key };
+                            return `<li><button type="button" class="nav-sublink" data-view-key="${esc(key)}">
+                                <i class="fa-solid ${child.table ? 'fa-table' : 'fa-angle-right'}" aria-hidden="true"></i>
+                                <span>${esc(child.label)}</span></button></li>`;
+                        }).join('')}
+                    </ul>
+                </li>`).join('')}
+        </ul>`).join('');
+
+    host.querySelectorAll('.nav-dropdown-toggle').forEach((button) => {
+        button.addEventListener('click', () => {
+            setDropdown(button, button.getAttribute('aria-expanded') !== 'true');
+        });
+    });
+    host.querySelectorAll('[data-view-key]').forEach((button) => {
+        button.addEventListener('click', () => openView(button.dataset.viewKey));
+    });
+}
+
+function activateSection(sectionKey) {
+    document.querySelectorAll('.module-view').forEach((el) => {
+        el.classList.toggle('active', el.id === sectionKey);
+    });
+}
+
+function openView(key, options = {}) {
+    const item = VIEW_REGISTRY[key];
+    if (!item) return;
+    currentView = item;
+    sessionStorage.setItem(ACTIVE_VIEW_KEY, key);
+
+    document.querySelectorAll('.nav-sublink').forEach((button) => {
+        button.classList.toggle('active', button.dataset.viewKey === key);
+    });
+    document.querySelectorAll('.nav-dropdown-toggle').forEach((button) => {
+        button.classList.toggle('active', button.dataset.module === item.module);
+    });
+    expandModule(item.module);
+
+    const breadcrumb = document.getElementById('moduleBreadcrumb');
+    if (breadcrumb) {
+        breadcrumb.textContent = item.table
+            ? `${titles[item.module] || ''} · ${TABLE_LABELS[item.table] || item.table}`
+            : (item.label.startsWith('Indicadores') ? titles[item.view] : item.label);
+    }
+
+    if (!options.keepDetail) {
+        currentDetail = null;
+        const detailHost = document.getElementById('tableExplorerDetail');
+        if (detailHost) detailHost.innerHTML = '';
+    }
+
+    if (item.table) {
+        renderTableExplorer(item.table);
+    } else if (item.view === 'itemUnits') {
+        renderUnitsExplorer();
+    } else {
+        activateSection(item.view);
+        loadModule(item.view);
+    }
     if (window.innerWidth <= 992) toggleSidebar(false);
-    loadModule(moduleKey);
 }
 
 // ---------- Sesión y acceso a la API ----------
 const TOKEN_KEY = 'domusfuego-token';
 const USER_KEY = 'domusfuego-user';
 const A11Y_KEY = 'domusfuego-admin-a11y';
-const ACTIVE_TAB_KEY = 'domusfuego-admin-active-tab';
 const token = localStorage.getItem(TOKEN_KEY);
 const currentUser = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
 const isAdmin = Boolean(token && currentUser?.roles?.includes('ADMINISTRADOR'));
@@ -180,17 +381,6 @@ function renderCatalogCard(container, table) {
         </table></div>`;
 }
 
-function renderModuleCatalogs(section) {
-    let zone = document.getElementById(`catalog-zone-${section}`);
-    if (!zone) {
-        zone = document.createElement('div');
-        zone.id = `catalog-zone-${section}`;
-        document.querySelector(`#${section}`)?.appendChild(zone);
-    }
-    (moduleCatalogTables[section] || []).forEach((table) => renderCatalogCard(zone, table));
-    wireTableActions(section, refreshActive);
-}
-
 function renderAllCatalogs() {
     let zone = document.getElementById('catalog-zone-catalogos');
     if (!zone) {
@@ -216,6 +406,27 @@ function renderAllCatalogs() {
     }
 }
 
+function unitsRowsHtml() {
+    return rowsOf('itemUnits').map((u) => `<tr>
+        <td>${esc(u.producto)}</td>
+        <td>${esc(u.simbolo_base ?? u.unidad_base)}</td>
+        <td>${esc(u.simbolo_compra ?? u.unidad_compra ?? '—')}</td>
+        <td>${u.factor_compra ?? '—'}</td>
+        <td>${esc(u.simbolo_venta ?? u.unidad_venta ?? '—')}</td>
+        <td>${u.factor_venta ?? '—'}</td>
+        <td>${pill(u.estado)}</td>
+        <td class="table-actions"><button type="button" data-edit="item" data-id="${u.id_item}">Editar producto</button></td>
+    </tr>`).join('') || '<tr><td class="table-empty" colspan="8">No hay unidades configuradas.</td></tr>';
+}
+
+function unitsTableHtml() {
+    return `<div class="table-responsive"><table class="admin-table">
+        <thead><tr><th>Producto</th><th>Base</th><th>Compra</th><th>Factor compra</th>
+            <th>Venta</th><th>Factor venta</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>${unitsRowsHtml()}</tbody>
+    </table></div>`;
+}
+
 function renderItemUnitsCard() {
     let card = document.getElementById('adminItemUnitsCard');
     if (!card) {
@@ -227,30 +438,97 @@ function renderItemUnitsCard() {
                 <h2><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
                     Unidades de medida por producto (con conversión automática)</h2>
                 <span class="catalog-count">factor = unidad ÷ unidad base · se calcula en la BD</span>
-            </div>
-            <div class="table-responsive"><table class="admin-table">
-                <thead><tr><th>Producto</th><th>Base</th><th>Compra</th><th>Factor compra</th>
-                    <th>Venta</th><th>Factor venta</th><th>Estado</th><th>Acciones</th></tr></thead>
-                <tbody id="adminItemUnitsBody"></tbody>
-            </table></div>`;
+            </div>${unitsTableHtml()}`;
         document.getElementById('inventario')?.appendChild(card);
-        card.addEventListener('click', (event) => {
-            const edit = event.target.closest('[data-edit]');
-            if (edit) openRecordForm(edit.dataset.edit, edit.dataset.id);
-        });
     }
-    const body = document.getElementById('adminItemUnitsBody');
-    if (!body) return;
-    body.innerHTML = rowsOf('itemUnits').map((u) => `<tr>
-        <td>${esc(u.producto)}</td>
-        <td>${esc(u.simbolo_base ?? u.unidad_base)}</td>
-        <td>${esc(u.simbolo_compra ?? u.unidad_compra ?? '—')}</td>
-        <td>${u.factor_compra ?? '—'}</td>
-        <td>${esc(u.simbolo_venta ?? u.unidad_venta ?? '—')}</td>
-        <td>${u.factor_venta ?? '—'}</td>
-        <td>${pill(u.estado)}</td>
-        <td class="table-actions"><button type="button" data-edit="item" data-id="${u.id_item}">Editar producto</button></td>
-    </tr>`).join('') || '<tr><td class="table-empty" colspan="8">No hay unidades configuradas.</td></tr>';
+    const body = card.querySelector('tbody');
+    if (body) body.innerHTML = unitsRowsHtml();
+}
+
+// ---------- Explorador genérico: una tabla o vista por opción del menú ----------
+function tableRowsHtml(table, rows, pk) {
+    const keys = [...new Set(rows.flatMap((row) => Object.keys(row)))].filter((k) => k !== 'password_hash');
+    const columns = keys.length ? keys : [pk];
+    const detail = DETAIL_MAP[table];
+    return `<div class="table-responsive"><table class="admin-table">
+        <thead><tr>${columns.map((c) => `<th scope="col">${esc(c)}</th>`).join('')}
+            <th scope="col">Acciones</th></tr></thead>
+        <tbody>${rows.map((row) => `<tr>
+            ${columns.map((c) => `<td>${esc(cellText(row[c]))}</td>`).join('')}
+            <td class="table-actions">
+                <button type="button" data-edit="${esc(table)}" data-id="${esc(row[pk])}">Editar</button>
+                ${detail ? `<button type="button" data-detail="${esc(table)}" data-detail-id="${esc(row[pk])}"
+                    data-detail-fk="${esc(detail.fk)}"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Ver detalle</button>` : ''}
+                <button type="button" class="danger" data-delete="${esc(table)}" data-id="${esc(row[pk])}">Eliminar</button>
+            </td></tr>`).join('') || `<tr><td class="table-empty" colspan="${columns.length + 1}">Sin registros en ${esc(TABLE_LABELS[table] || table)}.</td></tr>`}
+        </tbody></table></div>`;
+}
+
+function setExplorerHeader(title, note, newTable) {
+    const titleNode = document.getElementById('tableExplorerTitle');
+    if (titleNode) titleNode.innerHTML = title;
+    const noteNode = document.getElementById('tableExplorerNote');
+    if (noteNode) noteNode.textContent = note || '';
+    const newBtn = document.getElementById('tableExplorerNew');
+    if (newBtn) {
+        newBtn.hidden = !newTable;
+        if (newTable) newBtn.dataset.newTable = newTable;
+        else delete newBtn.dataset.newTable;
+    }
+}
+
+function renderTableExplorer(table) {
+    const rows = rowsOf(`cat:${table}`);
+    const pk = catalogPkOf(table, rows);
+    setExplorerHeader(
+        `<i class="fa-solid fa-table" aria-hidden="true"></i> ${esc(TABLE_LABELS[table] || table)}
+         <span class="catalog-count">${rows.length} registro(s)</span>`,
+        `CRUD de ${table}. Los campos de relación (proveedor, producto, unidad, usuario, rol…) se eligen en comboboxes con datos reales.`,
+        table
+    );
+    const host = document.getElementById('tableExplorerTable');
+    if (host) host.innerHTML = tableRowsHtml(table, rows, pk);
+    wireTableActions('tableExplorer', refreshActive);
+    activateSection('tableExplorer');
+}
+
+function renderUnitsExplorer() {
+    setExplorerHeader(
+        '<i class="fa-solid fa-ruler-combined" aria-hidden="true"></i> Unidades de medida por producto',
+        'factor = factor_base(unidad) ÷ factor_base(unidad base). Calculado por la base de datos; edítalo desde Productos / Ítems.',
+        null
+    );
+    const host = document.getElementById('tableExplorerTable');
+    if (host) host.innerHTML = unitsTableHtml();
+    wireTableActions('tableExplorer', refreshActive);
+    activateSection('tableExplorer');
+}
+
+function showDetail(masterTable, fk, id) {
+    const detail = DETAIL_MAP[masterTable];
+    const host = document.getElementById('tableExplorerDetail');
+    if (!detail || !host) return;
+    currentDetail = { masterTable, fk, id };
+    const rows = rowsOf(`cat:${detail.table}`).filter((row) => String(row[fk]) === String(id));
+    const pk = catalogPkOf(detail.table, rows);
+    host.innerHTML = `<div class="table-card catalog-card" style="margin-top:18px">
+        <div class="card-header-bar">
+            <h2><i class="fa-solid fa-list-check" aria-hidden="true"></i> ${esc(TABLE_LABELS[detail.table] || detail.table)}
+                <span class="catalog-count">${esc(TABLE_LABELS[masterTable] || masterTable)} #${esc(id)} · ${rows.length} fila(s)</span></h2>
+            <div class="explorer-actions">
+                <button type="button" class="btn-gold" data-new-table="${esc(detail.table)}"
+                        data-prefill-fk="${esc(fk)}" data-prefill-id="${esc(id)}">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Nueva línea
+                </button>
+                <button type="button" class="btn-red" id="detailClose">Cerrar detalle</button>
+            </div>
+        </div>
+        ${tableRowsHtml(detail.table, rows, pk)}
+    </div>`;
+    host.querySelector('#detailClose')?.addEventListener('click', () => {
+        host.innerHTML = '';
+        currentDetail = null;
+    });
 }
 
 // ---------- Precarga única de datos reales ----------
@@ -271,25 +549,10 @@ const dataEndpoints = {
     mesas: 'data/mesa',
     tables: 'data',
     itemUnits: 'item-unidades',
+    // Las 38 tablas se precargan completas (hasta 500 filas) para que el
+    // explorador y el "Ver detalle" funcionen sin peticiones adicionales.
+    ...Object.fromEntries(ALL_TABLES.map((table) => [`cat:${table}`, `data/${table}?limit=500`])),
 };
-
-// Catálogos independientes que se pueden crear/editar/borrar desde cada módulo.
-const moduleCatalogTables = {
-    inventario: ['categoria_item', 'item', 'item_presentacion', 'precio_venta',
-        'unidad_medida', 'proveedor', 'item_proveedor'],
-    compras: ['proveedor', 'orden_compra', 'orden_compra_detalle', 'recepcion', 'recepcion_detalle'],
-    produccion: ['receta', 'receta_detalle', 'costo_receta', 'costo_receta_detalle',
-        'orden_produccion', 'orden_produccion_detalle', 'merma', 'tipo_movimiento'],
-    sala: ['cliente', 'mesa', 'reserva', 'reserva_detalle'],
-    ventas: ['caja_sesion', 'pedido', 'pedido_detalle', 'venta', 'pago'],
-    contabilidad: ['categoria_gasto', 'gasto_operativo', 'tipo_movimiento_contable',
-        'movimiento_contable', 'tipo_movimiento'],
-    usuarios: ['usuario', 'usuarios', 'roles', 'rolesxusuario', 'cliente'],
-};
-const catalogTables = [...new Set(Object.values(moduleCatalogTables).flat())];
-Object.assign(dataEndpoints, Object.fromEntries(
-    catalogTables.map((table) => [`cat:${table}`, `data/${table}?limit=100`])
-));
 
 const cache = Object.create(null);
 const loadErrors = Object.create(null);
@@ -348,7 +611,6 @@ function renderModule(key) {
     };
     try {
         renderers[key]?.();
-        if (moduleCatalogTables[key]) renderModuleCatalogs(key);
     } catch (error) {
         toast(error.message);
     }
@@ -360,7 +622,11 @@ async function loadModule(key) {
 
 async function refreshActive() {
     await preloadAll();
-    renderModule(document.querySelector('.module-view.active')?.id || 'dashboard');
+    const detail = currentDetail;
+    currentDetail = null;
+    if (currentView) openView(currentView.key, { keepDetail: true });
+    else renderModule(document.querySelector('.module-view.active')?.id || 'dashboard');
+    if (detail) showDetail(detail.masterTable, detail.fk, detail.id);
 }
 
 function renderDashboard() {
@@ -698,16 +964,17 @@ function fieldHtml(column, value) {
         <label for="field-${esc(name)}">${esc(label)}${required ? ' *' : ''}</label>${input}</div>`;
 }
 
-async function openRecordForm(table, id = null) {
+async function openRecordForm(table, id = null, prefill = null) {
     try {
         const meta = await adminApi(`data/${table}/schema`);
         const row = id === null ? {} : await adminApi(`data/${table}/${id}`);
         modalState = { mode: 'record', table, id, columns: meta.columns };
 
         document.getElementById('adminModalTitle').textContent =
-            id === null ? `Nuevo registro · ${table}` : `Editar ${table} #${id}`;
+            id === null ? `Nuevo registro · ${TABLE_LABELS[table] || table}` : `Editar ${table} #${id}`;
         document.getElementById('adminFormFields').innerHTML =
-            `<div class="form-grid">${meta.columns.map((c) => fieldHtml(c, row[c.name])).join('')}</div>`;
+            `<div class="form-grid">${meta.columns.map((c) =>
+                fieldHtml(c, row[c.name] ?? prefill?.[c.name])).join('')}</div>`;
         document.getElementById('adminFormError').textContent = '';
         document.getElementById('adminModal').hidden = false;
         document.querySelector('#adminForm input, #adminForm select, #adminForm textarea')?.focus();
@@ -847,7 +1114,7 @@ function initAccessibility() {
 }
 
 function initKeyboardNav() {
-    const buttons = [...document.querySelectorAll('.nav-link')];
+    const buttons = [...document.querySelectorAll('.nav-dropdown-toggle, .nav-sublink')];
     buttons.forEach((button, index) => {
         button.addEventListener('keydown', (event) => {
             if (event.key !== 'ArrowDown' && event.key !== 'ArrowRight') return;
@@ -868,7 +1135,17 @@ if (isAdmin) {
     document.getElementById('adminForm').addEventListener('submit', saveModal);
     document.addEventListener('click', (event) => {
         const button = event.target.closest('[data-new-table]');
-        if (button) openRecordForm(button.dataset.newTable);
+        if (button) {
+            const prefill = button.dataset.prefillFk
+                ? { [button.dataset.prefillFk]: Number(button.dataset.prefillId) }
+                : null;
+            openRecordForm(button.dataset.newTable, null, prefill);
+            return;
+        }
+        const detailButton = event.target.closest('[data-detail]');
+        if (detailButton) {
+            showDetail(detailButton.dataset.detail, detailButton.dataset.detailFk, detailButton.dataset.detailId);
+        }
     });
     document.getElementById('adminModalClose').addEventListener('click', closeModal);
     document.getElementById('adminFormCancel').addEventListener('click', closeModal);
@@ -885,9 +1162,10 @@ if (isAdmin) {
     if (role) role.textContent = 'Administrador';
 
     initAccessibility();
+    renderSidebar();
     initKeyboardNav();
-    const savedTab = sessionStorage.getItem(ACTIVE_TAB_KEY);
-    const initialModule = titles[savedTab] ? savedTab : 'dashboard';
-    activateModule(initialModule);
-    preloadAll().then(() => renderModule(initialModule));
+    const savedView = sessionStorage.getItem(ACTIVE_VIEW_KEY);
+    const initialView = VIEW_REGISTRY[savedView] ? savedView : 'view:dashboard';
+    openView(initialView);
+    preloadAll().then(() => openView(currentView?.key || initialView));
 }
