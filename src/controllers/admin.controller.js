@@ -1,6 +1,11 @@
 // CONTROLADOR administrativo: traduce req/res hacia el servicio de administración.
 import { adminService } from "../services/index.js";
 
+const actorOf = (req) => ({
+  nombre: req.auth?.nombre || "Administrador",
+  ip: req.ip || null,
+});
+
 export async function overview(req, res) {
   return res.json(await adminService.overview());
 }
@@ -53,6 +58,11 @@ export async function audit(req, res) {
   return res.json(await adminService.audit());
 }
 
+export async function logs(req, res) {
+  const limit = Math.min(Number(req.query.limit ?? 50), 200);
+  return res.json(await adminService.logs(limit));
+}
+
 export async function schema(req, res) {
   return res.json(await adminService.schema(req.params.table));
 }
@@ -67,31 +77,47 @@ export async function find(req, res) {
 }
 
 export async function create(req, res) {
-  return res.status(201).json(await adminService.create(req.params.table, req.body));
+  return res.status(201).json(
+    await adminService.create(req.params.table, req.body, actorOf(req))
+  );
 }
 
 export async function update(req, res) {
-  return res.json(await adminService.update(req.params.table, req.params.id, req.body));
+  return res.json(
+    await adminService.update(req.params.table, req.params.id, req.body, actorOf(req))
+  );
 }
 
 export async function remove(req, res) {
-  return res.json(await adminService.remove(req.params.table, req.params.id));
+  return res.json(
+    await adminService.remove(req.params.table, req.params.id, actorOf(req))
+  );
 }
 
 export async function setReservationStatus(req, res) {
   return res.json(
-    await adminService.setReservationStatus(req.params.id, req.valid.body.estado)
+    await adminService.setReservationStatus(
+      req.params.id, req.valid.body.estado, actorOf(req)
+    )
   );
 }
 
 export async function setOrderStatus(req, res) {
-  return res.json(await adminService.setOrderStatus(req.params.id, req.valid.body.estado));
+  return res.json(
+    await adminService.setOrderStatus(
+      req.params.id, req.valid.body.estado, actorOf(req)
+    )
+  );
 }
 
 export async function setTableActive(req, res) {
-  return res.json(await adminService.setTableActive(req.params.id, req.body.activa));
+  return res.json(
+    await adminService.setTableActive(req.params.id, req.body.activa, actorOf(req))
+  );
 }
 
 export async function createUser(req, res) {
-  return res.status(201).json(await adminService.createUser(req.valid.body));
+  return res.status(201).json(
+    await adminService.createUser(req.valid.body, actorOf(req))
+  );
 }

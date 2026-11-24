@@ -58,6 +58,7 @@ Todas requieren `Authorization: Bearer <token>` y rol `ADMINISTRADOR` (obtenido 
 | GET | `/api/admin/finance` | Movimientos contables reales |
 | GET | `/api/admin/cash` | Sesiones de caja |
 | GET | `/api/admin/audit` | Métricas reales del esquema en Neon |
+| GET | `/api/admin/logs` | Bitácora real de acciones del panel (`auditoria_log`) |
 | GET | `/api/admin/tables` | Listado de tablas administrables y su PK |
 | GET | `/api/admin/data/:table` / `.../schema` / `.../:id` | Consulta genérica de tablas permitidas |
 | POST / PATCH / DELETE | `/api/admin/data/:table[/:id]` | Altas, ediciones y bajas genéricas |
@@ -97,6 +98,8 @@ amplios en móvil.
   máquina/red no alcanza el puerto 5432 y en serverless es más robusto.
 - `dns.setDefaultResultOrder('ipv4first')` en `src/database/connection.js` evita `EAI_AGAIN`.
 - Autenticación JWT propia (`JWT_SECRET`) + scrypt para contraseñas; roles leídos de `rolesxusuario`.
+- La auditoría del panel persiste en `auditoria_log` (`db/migrations/006_audit_log.sql`): altas,
+  ediciones, bajas y cambios de estado quedan con usuario, módulo, fecha e IP.
 - Carrito en `localStorage` (como el concepto original); el total que manda el navegador **no** se confía:
   el servidor recalcula precios desde `precio_venta`.
 - Reservas y pedidos son **solicitudes pendientes**, no confirmaciones operativas del restaurante.
@@ -111,7 +114,9 @@ amplios en móvil.
 - Producción: `/`, `/admin.html`, `/js/admin.js`, `/assets/admin.css`, `/js/app.js` y `/assets/styles.css`
   responden 200; todos los `/api/admin/*` (overview, inventario, compras, producción, ventas,
   finanzas, auditoría, reservas, pedidos, usuarios y mesas) responden 200 con token de administrador;
-  sin token responde 401. Deploy: `6b05a032ddd849fd02e14ade`.
+  sin token responde 401. Deploy: `6b05a383dc91f992cc190d28`.
+- Auditoría: `/api/admin/logs` devuelve la bitácora real; los cambios de estado/CRUD del panel
+  quedan registrados con usuario, módulo, detalle e IP.
 - Carta sin cambios: 8 ítems, 5 categorías, 8 presentaciones y 8 precios vigentes.
 
 ## Documentación de marca / negocio

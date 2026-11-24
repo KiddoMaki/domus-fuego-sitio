@@ -289,6 +289,27 @@ export const adminModel = {
     return resultRows(result);
   },
 
+  async logs(limit = 50) {
+    const result = await getDb().execute(sql`
+      select id_auditoria_log, fecha, usuario, modulo, accion, detalle, ip
+      from auditoria_log
+      order by fecha desc, id_auditoria_log desc
+      limit ${Math.min(Math.max(Number(limit) || 50, 1), 200)}
+    `);
+    return resultRows(result);
+  },
+
+  async log({ actor, modulo, accion, detalle, ip }) {
+    await getDb().execute(sql`
+      insert into auditoria_log (usuario, modulo, accion, detalle, ip)
+      values (${String(actor ?? "Administrador").slice(0, 120)},
+              ${String(modulo ?? "general").slice(0, 80)},
+              ${String(accion ?? "acción").slice(0, 80)},
+              ${detalle == null ? null : String(detalle).slice(0, 2000)},
+              ${ip == null ? null : String(ip).slice(0, 64)})
+    `);
+  },
+
   async audit() {
     const result = await getDb().execute(sql.raw(`
       select

@@ -146,6 +146,7 @@ const dataEndpoints = {
     cash: 'cash',
     sales: 'sales',
     audit: 'audit',
+    logs: 'logs',
     mesas: 'data/mesa',
 };
 
@@ -245,7 +246,6 @@ function renderDashboard() {
             `<span class="status-pill ${Number(a.signo) > 0 ? 'active' : 'cancelled'}">${Number(a.signo) > 0 ? 'Ingreso' : 'Egreso'}</span>`,
         ]),
     ];
-    ensureActions('dashboard');
     renderRows('dashboard', movements.map((cells) =>
         `<tr>${cells.map((cell) => `<td>${cell}</td>`).join('')}<td></td></tr>`).join(''));
 }
@@ -457,22 +457,38 @@ function renderAudit() {
     if (metrics[2]) metrics[2].textContent = `${a.foraneas ?? '—'} FK`;
 
     const timeline = document.getElementById('auditTimeline');
-    if (!timeline) return;
-    timeline.innerHTML = `<div class="audit-item">
-        <div class="audit-header">
-            <div class="audit-user"><i class="fa-solid fa-database" style="color: var(--color-gold);" aria-hidden="true"></i> Verificación del esquema en producción</div>
-            <div class="audit-time">${fmt(a.actualizado)}</div>
-        </div>
-        <div class="audit-action">
-            Se consultaron directamente los metadatos de la base de datos de Neon para comprobar la estructura desplegada.
-        </div>
-        <div class="audit-details">
-            Tablas base: ${esc(a.tablas ?? '—')}<br>
-            Vistas: ${esc(a.vistas ?? '—')}<br>
-            Llaves foráneas: ${esc(a.foraneas ?? '—')}<br>
-            Registros estimados: ${esc(a.registros ?? '—')}
-        </div>
-    </div>`;
+    if (timeline) {
+        timeline.innerHTML = `<div class="audit-item">
+            <div class="audit-header">
+                <div class="audit-user"><i class="fa-solid fa-database" style="color: var(--color-gold);" aria-hidden="true"></i> Verificación del esquema en producción</div>
+                <div class="audit-time">${fmt(a.actualizado)}</div>
+            </div>
+            <div class="audit-action">
+                Se consultaron directamente los metadatos de la base de datos de Neon para comprobar la estructura desplegada.
+            </div>
+            <div class="audit-details">
+                Tablas base: ${esc(a.tablas ?? '—')}<br>
+                Vistas: ${esc(a.vistas ?? '—')}<br>
+                Llaves foráneas: ${esc(a.foraneas ?? '—')}<br>
+                Registros estimados: ${esc(a.registros ?? '—')}
+            </div>
+        </div>`;
+    }
+
+    const logs = rowsOf('logs');
+    const logsBody = document.getElementById('auditLogsBody');
+    if (logsBody) {
+        logsBody.innerHTML = logs.map((log) => `<tr>
+            <td>${fmt(log.fecha)}</td>
+            <td>${esc(log.usuario)}</td>
+            <td>${esc(log.modulo)}</td>
+            <td>${esc(log.accion)}</td>
+            <td>${esc(log.detalle ?? '—')}</td>
+            <td>${esc(log.ip ?? '—')}</td>
+        </tr>`).join('') || '<tr><td class="table-empty" colspan="6">Aún no hay acciones registradas en la bitácora.</td></tr>';
+    }
+    const count = document.getElementById('auditLogCount');
+    if (count) count.textContent = `${logs.length} evento(s)`;
 }
 
 function renderErModel() {

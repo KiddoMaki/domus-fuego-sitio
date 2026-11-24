@@ -460,7 +460,7 @@
 
                 <div class="table-card">
                     <div class="card-header-bar">
-                        <h2><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Bitácora de Auditoría Independiente (AUDIT.md)</h2>
+                        <h2><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Verificación del esquema en producción</h2>
                         <span class="status-pill active"><i class="fa-solid fa-lock" aria-hidden="true"></i> Entorno Protegido</span>
                     </div>
                     <div style="padding: 20px;">
@@ -473,6 +473,28 @@
                                 <div class="audit-action">Cargando información real de la base de datos.</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="table-card" style="margin-top: 18px;">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Logs de acciones del panel (auditoria_log)</h2>
+                        <span class="status-pill active" id="auditLogCount">Cargando…</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Fecha</th>
+                                    <th scope="col">Usuario</th>
+                                    <th scope="col">Módulo</th>
+                                    <th scope="col">Acción</th>
+                                    <th scope="col">Detalle</th>
+                                    <th scope="col">Dirección IP</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditLogsBody"><tr><td class="table-empty" colspan="6">Cargando logs reales…</td></tr></tbody>
+                        </table>
                     </div>
                 </div>
             </section>

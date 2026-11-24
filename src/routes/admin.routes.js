@@ -25,6 +25,7 @@ router.get("/finance", asyncHandler(controller.finance));
 router.get("/cash", asyncHandler(controller.cash));
 router.get("/sales", asyncHandler(controller.sales));
 router.get("/audit", asyncHandler(controller.audit));
+router.get("/logs", asyncHandler(controller.logs));
 
 router.patch(
   "/reservations/:id/estado",

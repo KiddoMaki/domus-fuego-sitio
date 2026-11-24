@@ -12,6 +12,21 @@ const translate = (error) => {
   throw badRequest(error.message);
 };
 
+// La bitácora nunca debe impedir una operación válida del panel.
+const logAction = async (actor, modulo, accion, detalle) => {
+  try {
+    await adminModel.log({
+      actor: actor?.nombre || "Administrador",
+      modulo,
+      accion,
+      detalle,
+      ip: actor?.ip ?? null,
+    });
+  } catch (error) {
+    console.error("No se pudo registrar en auditoría:", error.message);
+  }
+};
+
 export const adminService = {
   overview: () => adminModel.overview(),
   catalog: () => adminModel.catalog(),
@@ -26,6 +41,7 @@ export const adminService = {
   cash: () => adminModel.cash(),
   sales: () => adminModel.sales(),
   audit: () => adminModel.audit(),
+  logs: (limit) => adminModel.logs(limit),
 
   schema(table) {
     try {
@@ -51,51 +67,60 @@ export const adminService = {
     }
   },
 
-  create(table, values) {
+  async create(table, values, actor) {
     try {
-      return adminModel.create(table, values);
+      const row = await adminModel.create(table, values);
+      await logAction(actor, table, "Crear registro", `Alta en ${table}: ${JSON.stringify(row).slice(0, 500)}`);
+      return row;
     } catch (error) {
       translate(error);
     }
   },
 
-  update(table, id, values) {
+  async update(table, id, values, actor) {
     try {
-      return adminModel.update(table, id, values);
+      const row = await adminModel.update(table, id, values);
+      await logAction(actor, table, "Editar registro", `${table} #${id}: ${JSON.stringify(values).slice(0, 500)}`);
+      return row;
     } catch (error) {
       translate(error);
     }
   },
 
-  remove(table, id) {
+  async remove(table, id, actor) {
     try {
-      return adminModel.remove(table, id);
+      const row = await adminModel.remove(table, id);
+      await logAction(actor, table, "Eliminar registro", `${table} #${id}`);
+      return row;
     } catch (error) {
       translate(error);
     }
   },
 
-  async setReservationStatus(id, estado) {
+  async setReservationStatus(id, estado, actor) {
     if (!RESERVATION_STATES.includes(estado)) throw badRequest("Estado de reserva no válido");
     const row = await adminModel.setReservationStatus(id, estado);
     if (!row) throw notFoundError("Reserva no encontrada");
+    await logAction(actor, "reserva", "Cambiar estado", `Reserva #${id} → ${estado}`);
     return row;
   },
 
-  async setOrderStatus(id, estado) {
+  async setOrderStatus(id, estado, actor) {
     if (!ORDER_STATES.includes(estado)) throw badRequest("Estado de pedido no válido");
     const row = await adminModel.setOrderStatus(id, estado);
     if (!row) throw notFoundError("Pedido no encontrado");
+    await logAction(actor, "pedido", "Cambiar estado", `Pedido #${id} → ${estado}`);
     return row;
   },
 
-  async setTableActive(id, activa) {
+  async setTableActive(id, activa, actor) {
     const row = await adminModel.setTableActive(id, Boolean(activa));
     if (!row) throw notFoundError("Mesa no encontrada");
+    await logAction(actor, "mesa", "Cambiar disponibilidad", `Mesa #${id} → ${activa ? "activa" : "inactiva"}`);
     return row;
   },
 
-  async createUser({ nombre, email, password, rol = "CLIENTE" }) {
+  async createUser({ nombre, email, password, rol = "CLIENTE" }, actor) {
     const normalizedEmail = String(email ?? "").trim().toLowerCase();
     if (!ROLES.includes(rol)) throw badRequest("Rol no válido");
     if (await userModel.findByEmail(normalizedEmail)) {
@@ -113,6 +138,7 @@ export const adminService = {
       idCliente,
     });
     await userModel.assignRole(user.id, rol);
+    await logAction(actor, "usuarios", "Crear usuario", `${email} con rol ${rol}`);
     return { ...user, roles: [rol] };
   },
 };
