@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOMUS FUEGO | Panel Administrativo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/admin.css">
+</head>
+<body>
+    <a class="skip-link" href="#contenidoPrincipal">Saltar al contenido principal</a>
+
+    <!-- OVERLAY OSCURO PARA MENÚ MÓVIL -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar(false)" aria-hidden="true"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="mainSidebar" aria-label="Menú principal de navegación">
+        <div class="brand-header">
+            <div class="brand-title-wrap">
+                <i class="fa-solid fa-fire-burner brand-icon" aria-hidden="true"></i>
+                <div>
+                    <h1>DOMUS <span>FUEGO</span></h1>
+                    <p style="font-size: 10px; color: var(--color-text-muted); letter-spacing: 1px;">SISTEMA ADMINISTRATIVO</p>
+                </div>
+            </div>
+            <button class="close-sidebar-btn" onclick="toggleSidebar(false)" aria-label="Cerrar menú lateral">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="nav-section-title" id="navModulesHeading">Módulos Administrativos</div>
+        <ul class="nav-menu" role="tablist" aria-labelledby="navModulesHeading">
+            <li class="nav-item" role="presentation">
+                <button id="tab-dashboard" role="tab" aria-selected="true" aria-controls="dashboard" class="nav-link active" onclick="switchTab('dashboard', this)">
+                    <i class="fa-solid fa-chart-line" aria-hidden="true"></i> Resumen Ejecutivo
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button role="tab" aria-selected="false" aria-controls="inventario" class="nav-link" onclick="switchTab('inventario', this)">
+                    <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> Catálogo e Items
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button role="tab" aria-selected="false" aria-controls="compras" class="nav-link" onclick="switchTab('compras', this)">
+                    <i class="fa-solid fa-truck-ramp-box" aria-hidden="true"></i> Compras & Proveedores
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button role="tab" aria-selected="false" aria-controls="produccion" class="nav-link" onclick="switchTab('produccion', this)">
+                    <i class="fa-solid fa-kitchen-set" aria-hidden="true"></i> Producción & Recetas
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button role="tab" aria-selected="false" aria-controls="sala" class="nav-link" onclick="switchTab('sala', this)">
+                    <i class="fa-solid fa-chair" aria-hidden="true"></i> Mesas & Reservas
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button role="tab" aria-selected="false" aria-controls="ventas" class="nav-link" onclick="switchTab('ventas', this)">
+                    <i class="fa-solid fa-cash-register" aria-hidden="true"></i> Pedidos, Ventas & Caja
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button role="tab" aria-selected="false" aria-controls="contabilidad" class="nav-link" onclick="switchTab('contabilidad', this)">
+                    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> Finanzas & Gastos
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button role="tab" aria-selected="false" aria-controls="er_model" class="nav-link" onclick="switchTab('er_model', this)">
+                    <i class="fa-solid fa-project-diagram" aria-hidden="true"></i> Modelo Entidad-Relación
+                </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+                <button role="tab" aria-selected="false" aria-controls="usuarios" class="nav-link" onclick="switchTab('usuarios', this)">
+                    <i class="fa-solid fa-users-gear" aria-hidden="true"></i> Usuarios & Roles
+                </button>
+            </li>
+
+            <div class="nav-section-title" id="navSecurityHeading" style="margin-top: 15px;">Seguridad & Control</div>
+            <li class="nav-item" role="presentation">
+                <button role="tab" aria-selected="false" aria-controls="auditoria" class="nav-link audit-special" onclick="switchTab('auditoria', this)">
+                    <i class="fa-solid fa-shield-halved" style="color: var(--color-gold);" aria-hidden="true"></i> Auditoría & Bitácora
+                </button>
+            </li>
+        </ul>
+
+        <div class="user-profile-badge">
+            <div class="avatar" aria-label="Avatar Administrador">AD</div>
+            <div class="user-info">
+                <div class="name">Gerencia General</div>
+                <div class="role">Admin Principal</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTAINER -->
+    <main class="main-container">
+        <!-- TOPBAR -->
+        <header class="top-navbar">
+            <div class="navbar-left">
+                <button class="hamburger-btn" onclick="toggleSidebar(true)" aria-label="Abrir menú de navegación">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <nav class="breadcrumb" aria-label="Ubicación de página">
+                    <span>DOMUS FUEGO</span>
+                    <i class="fa-solid fa-chevron-right" style="font-size: 10px;" aria-hidden="true"></i>
+                    <span class="current" id="moduleBreadcrumb" aria-current="page">Resumen Ejecutivo</span>
+                </nav>
+            </div>
+
+            <div class="top-actions">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" placeholder="Buscar transacción o item..." aria-label="Buscar en el sistema">
+                </div>
+                <button type="button" id="a11yToggle" class="a11y-toggle" aria-label="Abrir opciones de accesibilidad" aria-expanded="false" aria-controls="a11yPanel">
+                    <i class="fa-solid fa-universal-access" aria-hidden="true"></i> Accesibilidad
+                </button>
+                <a class="btn-red" href="/">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Volver al sitio
+                </a>
+                <button class="btn-gold" id="adminLogout" type="button">
+                    <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> Cerrar sesión
+                </button>
+            </div>
+        </header>
+
+
+        <div class="a11y-panel" id="a11yPanel" hidden role="group" aria-label="Opciones de accesibilidad">
+            <label><input type="checkbox" id="a11yLarge"> Texto grande</label>
+            <label><input type="checkbox" id="a11yContrast"> Alto contraste</label>
+            <label><input type="checkbox" id="a11yReduced"> Reducir movimiento</label>
+            <label>Velocidad de la interfaz
+                <select id="a11ySpeed">
+                    <option value="normal">Normal</option>
+                    <option value="lenta">Lenta</option>
+                    <option value="sin">Sin movimiento</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="content-scrollable" id="contenidoPrincipal" aria-busy="true">
+
+            <!-- 1. DASHBOARD -->
+            <section id="dashboard" class="module-view active" role="tabpanel" aria-labelledby="tab-dashboard">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-title">Ventas registradas <i class="fa-solid fa-receipt" aria-hidden="true"></i></div>
+                        <div class="metric-value">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                    <div class="metric-card accent-gold">
+                        <div class="metric-title">Cajas abiertas <i class="fa-solid fa-vault" aria-hidden="true"></i></div>
+                        <div class="metric-value">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Órdenes en curso <i class="fa-solid fa-fire" aria-hidden="true"></i></div>
+                        <div class="metric-value">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                    <div class="metric-card accent-gold">
+                        <div class="metric-title">Ocupación de Mesas <i class="fa-solid fa-users" aria-hidden="true"></i></div>
+                        <div class="metric-value">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Últimos Movimientos Administrativos</h2>
+                        <span style="font-size: 12px; color: var(--color-gold);">Datos reales de la base</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">ID Transacción</th>
+                                    <th scope="col">Módulo</th>
+                                    <th scope="col">Descripción</th>
+                                    <th scope="col">Monto / Cantidad</th>
+                                    <th scope="col">Fecha/Hora</th>
+                                    <th scope="col">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody><tr><td class="table-empty" colspan="8">Cargando datos reales…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. INVENTARIO & ITEMS -->
+            <section id="inventario" class="module-view" role="tabpanel">
+                <div class="metrics-grid">
+                    <div class="metric-card accent-gold">
+                        <div class="metric-title">Total Items Registrados</div>
+                        <div class="metric-value">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Lotes con Alerta de Vencimiento</div>
+                        <div class="metric-value">—</div>
+                        <div class="metric-sub" style="color: #FF5E5E;">Datos de la base</div>
+                    </div>
+                    <div class="metric-card accent-gold">
+                        <div class="metric-title">Valorización de Stock</div>
+                        <div class="metric-value">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-list-check" aria-hidden="true"></i> Catálogo de Insumos y Productos (item, categoria_item, lote_inventario)</h2>
+                        <button class="btn-gold" style="font-size: 11px; padding: 6px 12px;"><i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo Item</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Código</th>
+                                    <th scope="col">Nombre</th>
+                                    <th scope="col">Categoría</th>
+                                    <th scope="col">Unidad Base</th>
+                                    <th scope="col">Política Consumo</th>
+                                    <th scope="col">Stock Actual</th>
+                                    <th scope="col">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody><tr><td class="table-empty" colspan="8">Cargando datos reales…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. COMPRAS & PROVEEDORES -->
+            <section id="compras" class="module-view" role="tabpanel">
+                <div class="table-card">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-truck" aria-hidden="true"></i> Gestión de Proveedores y Órdenes de Compra (proveedor, orden_compra, recepcion)</h2>
+                        <button class="btn-gold" style="font-size: 11px; padding: 6px 12px;"><i class="fa-solid fa-plus" aria-hidden="true"></i> Nueva Orden</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Orden #</th>
+                                    <th scope="col">Proveedor</th>
+                                    <th scope="col">Fecha Emisión</th>
+                                    <th scope="col">Estado OC</th>
+                                    <th scope="col">Recepción Almacén</th>
+                                    <th scope="col">Total Factura</th>
+                                </tr>
+                            </thead>
+                            <tbody><tr><td class="table-empty" colspan="8">Cargando datos reales…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. PRODUCCION & RECETAS -->
+            <section id="produccion" class="module-view" role="tabpanel">
+                <div class="table-card">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-fire-flame-curved" aria-hidden="true"></i> Recetas y Órdenes de Producción (receta, orden_produccion, merma)</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Receta</th>
+                                    <th scope="col">Rendimiento</th>
+                                    <th scope="col">Costo Porción</th>
+                                    <th scope="col">Merma Est.</th>
+                                    <th scope="col">Última Ejecución</th>
+                                    <th scope="col">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody><tr><td class="table-empty" colspan="8">Cargando datos reales…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. SALA & RESERVAS -->
+            <section id="sala" class="module-view" role="tabpanel">
+                <div class="metrics-grid">
+                    <div class="metric-card accent-gold">
+                        <div class="metric-title">Mesas Totales</div>
+                        <div class="metric-value">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Reservas activas</div>
+                        <div class="metric-value">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                    <div class="metric-card accent-gold">
+                        <div class="metric-title">Reservas Confirmadas</div>
+                        <div class="metric-value">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Registro de Reservas (reserva, cliente, mesa)</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Reserva #</th>
+                                    <th scope="col">Cliente</th>
+                                    <th scope="col">Mesa</th>
+                                    <th scope="col">Comensales</th>
+                                    <th scope="col">Fecha & Hora</th>
+                                    <th scope="col">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody><tr><td class="table-empty" colspan="8">Cargando datos reales…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. VENTAS & CAJA -->
+            <section id="ventas" class="module-view" role="tabpanel">
+                <div class="table-card">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i> Control de Sesión de Caja y Ventas (caja_sesion, venta, pago)</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Factura Venta</th>
+                                    <th scope="col">Sesión Caja</th>
+                                    <th scope="col">Medio de Pago</th>
+                                    <th scope="col">Monto Total</th>
+                                    <th scope="col">Fecha & Hora</th>
+                                    <th scope="col">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody><tr><td class="table-empty" colspan="8">Cargando datos reales…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. FINANZAS & CONTABILIDAD -->
+            <section id="contabilidad" class="module-view" role="tabpanel">
+                <div class="table-card">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-calculator" aria-hidden="true"></i> Libro Contable y Gastos Operativos (movimiento_contable, gasto_operativo)</h2>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Asiento #</th>
+                                    <th scope="col">Tipo Operación</th>
+                                    <th scope="col">Concepto / Referencia</th>
+                                    <th scope="col">Signo</th>
+                                    <th scope="col">Monto Contable</th>
+                                    <th scope="col">Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody><tr><td class="table-empty" colspan="8">Cargando datos reales…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 8. MODELO ENTIDAD-RELACIÓN -->
+            <section id="er_model" class="module-view" role="tabpanel">
+                <div class="table-card">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-network-wired" aria-hidden="true"></i> Arquitectura Entidad-Relación (<span id="erModelSummary">Consultando esquema…</span>)</h2>
+                        <span class="status-pill active" aria-label="Esquema desplegado en Neon">
+                            <i class="fa-solid fa-database" aria-hidden="true"></i> Esquema en producción
+                        </span>
+                    </div>
+                    <div class="er-diagram-container">
+                        <div style="margin-bottom: 15px; color: var(--color-gold); font-size: 13px; font-weight: 600;">
+                            Esquema de Agrupación por Clusters Funcionales:
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+                            <div style="background: #141414; padding: 16px; border-radius: 8px; border-left: 3px solid var(--color-gold);">
+                                <h3 style="color: var(--color-gold); font-size: 14px; margin-bottom: 8px;">1. Maestro & Items</h3>
+                                <p style="font-size: 12px; color: #BBB;">`unidad_medida` &rarr; `categoria_item` &rarr; `item` &rarr; `item_presentacion` &rarr; `precio_venta`</p>
+                            </div>
+                            <div style="background: #141414; padding: 16px; border-radius: 8px; border-left: 3px solid var(--color-red-deep);">
+                                <h3 style="color: #FF5E5E; font-size: 14px; margin-bottom: 8px;">2. Compras & Proveedores</h3>
+                                <p style="font-size: 12px; color: #BBB;">`proveedor` &rarr; `orden_compra` &rarr; `orden_compra_detalle` &rarr; `recepcion` &rarr; `recepcion_detalle`</p>
+                            </div>
+                            <div style="background: #141414; padding: 16px; border-radius: 8px; border-left: 3px solid var(--color-gold);">
+                                <h3 style="color: var(--color-gold); font-size: 14px; margin-bottom: 8px;">3. Producción & Cocina</h3>
+                                <p style="font-size: 12px; color: #BBB;">`receta` &rarr; `receta_detalle` &rarr; `orden_produccion` &rarr; `lote_inventario` &rarr; `merma`</p>
+                            </div>
+                            <div style="background: #141414; padding: 16px; border-radius: 8px; border-left: 3px solid var(--color-red-deep);">
+                                <h3 style="color: #FF5E5E; font-size: 14px; margin-bottom: 8px;">4. Sala, Ventas & Caja</h3>
+                                <p style="font-size: 12px; color: #BBB;">`mesa` + `cliente` &rarr; `reserva` &rarr; `pedido` &rarr; `pedido_detalle` &rarr; `venta` &rarr; `pago` &larr; `caja_sesion`</p>
+                            </div>
+                            <div style="background: #141414; padding: 16px; border-radius: 8px; border-left: 3px solid var(--color-white);">
+                                <h3 style="color: var(--color-white); font-size: 14px; margin-bottom: 8px;">5. Contabilidad & Kardex</h3>
+                                <p style="font-size: 12px; color: #BBB;">`tipo_movimiento` &rarr; `movimiento_inventario` &bull; `gasto_operativo` &rarr; `movimiento_contable`</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 9. AUDITORIA & BITACORA -->
+            <section id="usuarios" class="module-view" role="tabpanel">
+                <div class="metrics-grid">
+                    <div class="metric-card accent-gold">
+                        <div class="metric-title">Usuarios registrados</div>
+                        <div class="metric-value" id="metricUsers">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                </div>
+                <div class="table-card">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-users-gear" aria-hidden="true"></i> Usuarios y roles (usuarios, roles, rolesxusuario)</h2>
+                        <button class="btn-gold" id="newUserBtn" type="button" style="font-size: 11px; padding: 6px 12px;">
+                            <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Nuevo usuario
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead><tr><th>ID</th><th>Nombre</th><th>Correo</th><th>Roles</th><th>Estado</th><th>Acciones</th></tr></thead>
+                            <tbody id="usersTableBody"><tr><td class="table-empty" colspan="8">Cargando datos reales…</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="auditoria" class="module-view" role="tabpanel">
+                <div class="metrics-grid">
+                    <div class="metric-card accent-gold">
+                        <div class="metric-title">Modelo Auditor Activo</div>
+                        <div class="metric-value" style="font-size: 20px;">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-title">Integridad de Tablas</div>
+                        <div class="metric-value" style="color: #2ECC71;">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                    <div class="metric-card accent-gold">
+                        <div class="metric-title">Restricciones de Integridad</div>
+                        <div class="metric-value">—</div>
+                        <div class="metric-sub">Datos de la base</div>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Bitácora de Auditoría Independiente (AUDIT.md)</h2>
+                        <span class="status-pill active"><i class="fa-solid fa-lock" aria-hidden="true"></i> Entorno Protegido</span>
+                    </div>
+                    <div style="padding: 20px;">
+                        <div class="audit-timeline" id="auditTimeline" aria-live="polite">
+                            <div class="audit-item">
+                                <div class="audit-header">
+                                    <div class="audit-user"><i class="fa-solid fa-database" style="color: var(--color-gold);" aria-hidden="true"></i> Verificación del esquema</div>
+                                    <div class="audit-time">Consultando metadatos…</div>
+                                </div>
+                                <div class="audit-action">Cargando información real de la base de datos.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+
+    <div class="admin-loading" id="adminLoading" role="status" aria-live="polite">
+        <div class="admin-loading-card">
+            <i class="fa-solid fa-fire-burner" aria-hidden="true"></i>
+            <p>Preparando datos reales del restaurante…</p>
+            <span>Cargando panel administrativo</span>
+        </div>
+    </div>
+    <div class="sr-only" id="adminStatus" role="status" aria-live="polite"></div>
+
+    <div class="modal-overlay" id="adminModal" hidden>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
+        <div class="modal-header-bar">
+          <h2 id="adminModalTitle">Editar registro</h2>
+          <button type="button" id="adminModalClose" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="adminForm" class="modal-form">
+          <div id="adminFormFields"></div>
+          <p id="adminFormError" class="form-error" role="alert"></p>
+          <div class="modal-actions">
+            <button type="button" id="adminFormCancel" class="btn-red">Cancelar</button>
+            <button type="submit" class="btn-gold" id="adminFormSubmit">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="adminToast" class="admin-toast" role="status" aria-live="polite" hidden></div>
+    <script src="js/admin.js"></script>
+</body>
+</html>

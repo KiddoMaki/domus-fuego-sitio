@@ -21,448 +21,294 @@
       crossorigin="anonymous"
     />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="assets/styles.css" />
     <script type="module" src="js/app.js"></script>
   </head>
   <body>
-    <header>
-      <nav class="navbar site-navbar navbar-expand-lg navbar-dark bg-dark sticky-top border-bottom border-warning-subtle" aria-label="Navegación principal">
-        <div class="container">
-          <a class="navbar-brand d-flex align-items-center gap-2" href="#inicio" data-landing-link>
-            <img src="assets/DFLOGO.svg" width="52" height="52" class="rounded-circle border border-warning" alt="Logo de Domus Fuego" />
-            <span>
-              <strong class="d-block">Domus Fuego</strong>
-              <small class="text-warning">Parrilla • Steakhouse • BBQ</small>
-            </span>
-          </a>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Abrir menú de navegación">
-            <span class="navbar-toggler-icon"></span>
-          </button>
-          <div class="collapse navbar-collapse" id="mainNavigation">
-            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-3">
-              <li class="nav-item"><a class="nav-link" href="#essence" data-landing-link>Nuestra esencia</a></li>
-              <li class="nav-item"><button class="nav-link menu-nav-button" type="button" id="menuNavButton" aria-controls="menuView" aria-expanded="false">Menú</button></li>
-              <li class="nav-item"><a class="nav-link" href="#reservas" data-landing-link>Reservas</a></li>
-              <li class="nav-item"><a class="nav-link" href="#contacto" data-landing-link>Contacto</a></li>
-              <li class="nav-item"><a class="btn btn-danger rounded-pill px-4" href="#reservas" data-landing-link>Reservar mesa</a></li>
-              <li class="nav-item"><a class="nav-link cart-nav-link" href="#cartPanel" data-open-menu aria-label="Abrir carrito de compras" title="Carrito de compras"><i class="bi bi-cart3" aria-hidden="true"></i><span id="cartCount" class="cart-count" aria-label="0 productos" aria-live="polite">0</span></a></li>
-            </ul>
-          </div>
+    <a class="skip-link" href="#contenidoPublico">Saltar al contenido principal</a>
+    <!-- La navbar se mantiene visible en TODAS las vistas. -->
+    <nav class="navbar site-navbar navbar-expand-lg navbar-dark sticky-top border-bottom border-warning-subtle" aria-label="Navegación principal">
+      <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="#" data-view="landing" data-anchor="essence">
+          <img src="assets/DFLOGO.svg" width="52" height="52" class="rounded-circle border border-warning" alt="Logo de Domus Fuego" />
+          <span>
+            <strong class="d-block">Domus Fuego</strong>
+            <small class="text-warning">Parrilla • Steakhouse • BBQ</small>
+          </span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavigation" aria-controls="mainNavigation" aria-expanded="false" aria-label="Abrir navegación">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNavigation">
+          <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-3">
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-view="landing" data-anchor="essence">Esencia</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-view="carta">Carta</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-view="reservas">
+                <i class="bi bi-calendar-check me-1" aria-hidden="true"></i>Reservas
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-view="landing" data-anchor="contacto">Contacto</a>
+            </li>
+            <li class="nav-item ms-lg-3">
+              <button type="button" id="authButton" class="btn btn-outline-warning btn-sm rounded-pill px-3">
+                <i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>Iniciar sesión
+              </button>
+            </li>
+          </ul>
         </div>
-      </nav>
-    </header>
-
-    <main>
-      <div id="landingView">
-        <section id="inicio" class="bg-dark text-light py-5">
-          <div class="container py-5">
-            <p class="text-warning text-uppercase fw-bold small">Cultura • Fuego • Sabor</p>
-            <h1 class="display-1 fw-bold">Domus Fuego</h1>
-            <p class="lead text-light">Nacido del fuego. Creado para el sabor.</p>
-            <p class="lead text-light col-lg-8">
-              El punto de encuentro donde dos culturas se fusionan a través del fuego.
-              Cortes premium, elegidos al detalle, llevados a la perfección por la parrilla.
-            </p>
-            <div class="d-flex flex-column flex-sm-row gap-3 mt-4">
-              <a href="#reservas" data-landing-link class="btn btn-danger btn-lg rounded-pill px-4">Reservar mesa</a>
-              <button type="button" class="btn btn-outline-warning btn-lg rounded-pill px-4" data-open-menu>Ver menú</button>
-            </div>
-          </div>
-        </section>
-
-        <section id="essence" class="bg-black text-light py-5">
-          <div class="container py-5">
-            <div class="mb-5">
-              <p class="text-warning text-uppercase fw-bold small">Nuestra esencia</p>
-              <h2 class="display-5 fw-bold">Donde el fuego convierte cada corte en una experiencia.</h2>
-            </div>
-
-            <div class="row g-4 align-items-center">
-              <div class="col-lg-5">
-                <p class="text-light">
-                  En Domus Fuego, el fuego está en el corazón de todo lo que hacemos.
-                  Nuestra cocina celebra el arte atemporal de la cocina a la leña, donde
-                  los ingredientes de primera calidad se encuentran con el humo, la llama y
-                  un sabor audaz que despierta los sentidos.
-                </p>
-                <p class="text-light">
-                  Desde cortes argentinos cuidadosamente seleccionados hasta preparaciones
-                  que rinden homenaje a la tradición y la innovación, cada mesa se convierte
-                  en un encuentro de estilo, pasión y autenticidad.
-                </p>
-                <div class="row g-3 mt-4">
-                  <div class="col-md-4 col-lg-12 col-xl-4">
-                    <div class="card h-100 bg-dark text-light border-warning-subtle p-3">
-                      <strong class="text-warning">Premium</strong>
-                      <span>Cortes cuidadosamente elegidos</span>
-                    </div>
-                  </div>
-                  <div class="col-md-4 col-lg-12 col-xl-4">
-                    <div class="card h-100 bg-dark text-light border-warning-subtle p-3">
-                      <strong class="text-warning">Leña</strong>
-                      <span>Sabor intenso y auténtico</span>
-                    </div>
-                  </div>
-                  <div class="col-md-4 col-lg-12 col-xl-4">
-                    <div class="card h-100 bg-dark text-light border-warning-subtle p-3">
-                      <strong class="text-warning">Fusión</strong>
-                      <span>Tradición y cultura en cada plato</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-lg-7">
-                <div class="row g-3" role="group" aria-label="Galería de Domus Fuego">
-                  <div class="col-md-6">
-                    <img class="img-fluid rounded-4 h-100 object-fit-cover" src="https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&amp;fit=crop&amp;w=900&amp;q=80" alt="Corte de carne a la parrilla" loading="lazy" />
-                  </div>
-                  <div class="col-md-6 d-flex flex-column gap-3">
-                    <img class="img-fluid rounded-4 object-fit-cover" src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&amp;fit=crop&amp;w=900&amp;q=80" alt="Ingredientes frescos para parrilla" loading="lazy" />
-                    <img class="img-fluid rounded-4 object-fit-cover" src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&amp;fit=crop&amp;w=900&amp;q=80" alt="Bebida de autor en restaurante" loading="lazy" />
-                  </div>
-                  <div class="col-12">
-                    <img class="img-fluid rounded-4 w-100" src="https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&amp;fit=crop&amp;w=1200&amp;q=80" alt="Comensales disfrutando una cena" loading="lazy" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="menu" class="bg-dark text-light py-5">
-          <div class="container py-5">
-            <div class="text-center mb-5">
-              <p class="text-warning text-uppercase fw-bold small">Menú</p>
-              <h2 class="display-5 fw-bold">El fuego pone las reglas</h2>
-              <p>Descubre nuestros platos, cortes a la parrilla y bebidas.</p>
-              <button type="button" class="btn btn-outline-warning rounded-pill px-4" data-open-menu>Explorar menú completo</button>
-            </div>
-          </div>
-        </section>
-
-        <section id="reservas" class="bg-black text-light py-5">
-          <div class="container py-5 row g-5 mx-auto align-items-center">
-            <div class="col-lg-6">
-              <p class="text-warning text-uppercase fw-bold small">Reservas</p>
-              <h2 class="display-5 fw-bold">Haz tu reserva y vive la experiencia Domus Fuego.</h2>
-              <p class="text-light">
-                Te esperamos para una noche de fuego, sabor y estilo. Reserva con anticipación
-                y disfruta de los cortes más selectos con la mejor atención.
-              </p>
-              <div class="row g-3 mt-4">
-                <div class="col-sm-6"><div class="card bg-dark text-light border-warning-subtle p-3">
-                  <strong class="display-6 text-warning">2+</strong>
-                  <span>salas premium</span>
-                </div></div>
-                <div class="col-sm-6"><div class="card bg-dark text-light border-warning-subtle p-3">
-                  <strong class="display-6 text-warning">7 días</strong>
-                  <span>de atención</span>
-                </div></div>
-              </div>
-            </div>
-
-            <form class="col-lg-6 reservation-form" id="reservationForm">
-              <div class="card bg-dark text-light border-warning p-4">
-                <h3 class="h4 mb-4">Solicita tu reserva</h3>
-                <label class="form-label" for="reservationName">Nombre del cliente</label>
-                <input class="form-control mb-3" id="reservationName" type="text" name="nombre" placeholder="Tu nombre" autocomplete="name" required />
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <label class="form-label" for="reservationDate">Fecha</label>
-                    <input class="form-control" id="reservationDate" type="date" name="fecha" required aria-describedby="dateHelp" />
-                    <small id="dateHelp" class="form-text text-light">Selecciona hoy o una fecha futura.</small>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="reservationTime">Hora</label>
-                    <input class="form-control" id="reservationTime" type="time" name="hora" required />
-                  </div>
-                </div>
-                <label class="form-label mt-3" for="reservationContact">Contacto (teléfono o correo)</label>
-                <input class="form-control" id="reservationContact" type="text" name="contacto" placeholder="0991234567 o correo@dominio.com" autocomplete="tel" required />
-                <label class="form-label mt-3" for="reservationGuests">Número de personas</label>
-                <select class="form-select" id="reservationGuests" name="personas" required>
-                  <option value="2">2 personas</option>
-                  <option value="4">4 personas</option>
-                  <option value="6">6 personas</option>
-                  <option value="8">8 personas</option>
-                  <option value="10+">10 o más personas</option>
-                </select>
-                <button type="submit" class="btn btn-danger btn-lg w-100 rounded-pill mt-4">Confirmar reserva</button>
-                <div class="reservation-feedback mt-3" id="reservationFeedback" role="status" aria-live="polite" tabindex="-1" hidden></div>
-              </div>
-            </form>
-          </div>
-        </section>
       </div>
+    </nav>
 
-      <section id="menuView" class="menu-page" aria-labelledby="menuTitle" hidden>
-        <div class="container menu-container">
-          <div class="menu-heading">
-            <p class="eyebrow">Parrilla • Steakhouse • BBQ</p>
-            <p class="menu-monogram" aria-hidden="true">DF</p>
-            <h1 id="menuTitle" tabindex="-1">Domus Fuego</h1>
-            <p class="menu-subtitle">Para los amantes del fuego y la buena carne</p>
-            <p class="demo-notice" role="note">Menú de demostración; productos, precios y disponibilidad por confirmar.</p>
-            <button type="button" class="btn btn-dark rounded-pill px-4 menu-back" data-close-menu>Volver al sitio</button>
+    <main id="contenidoPublico" tabindex="-1">
+      <!-- VISTA 1: ESENCIA (vista inicial; la navbar se mantiene siempre) -->
+      <section id="view-landing" class="view" data-view="landing">
+        <section id="essence" class="section-pad" aria-labelledby="essenceTitle">
+          <div class="container">
+            <div class="section-head centered">
+              <p class="eyebrow">Nuestra esencia</p>
+              <h2 id="essenceTitle" class="section-title">El fuego como forma de cocinar</h2>
+              <p class="section-subtitle">Producto fresco, sazón sencilla y el tiempo justo frente a la brasa.</p>
+            </div>
+            <div class="row g-3 gallery">
+              <div class="col-6 col-md-3"><img class="img-fluid gallery-img" src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80" alt="Corte de carne a la parrilla" loading="lazy" /></div>
+              <div class="col-6 col-md-3"><img class="img-fluid gallery-img" src="https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=900&q=80" alt="Carne sellada al fuego" loading="lazy" /></div>
+              <div class="col-6 col-md-3"><img class="img-fluid gallery-img" src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=900&q=80" alt="Bebida fría de la casa" loading="lazy" /></div>
+              <div class="col-6 col-md-3"><img class="img-fluid gallery-img" src="https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=900&q=80" alt="Mesa lista para compartir" loading="lazy" /></div>
+            </div>
+            <div class="text-center mt-4">
+              <button type="button" class="btn btn-warning rounded-pill px-4" data-view="carta">Ver la carta</button>
+            </div>
           </div>
+        </section>
 
+        <section id="contacto" class="section-pad" aria-labelledby="contactoTitle">
+          <div class="container">
+            <div class="section-head centered">
+              <p class="eyebrow">Contáctanos</p>
+              <h2 id="contactoTitle" class="section-title">Estamos para recibirte</h2>
+            </div>
+            <div class="row g-4 text-center">
+              <div class="col-md-4"><h3 class="h5">Horarios</h3><p>Martes a domingo: 12:00 – 22:00<br />Lunes: cerrado</p></div>
+              <div class="col-md-4"><h3 class="h5">Dirección</h3><p>Parroquia de la Concepción, Quito</p></div>
+              <div class="col-md-4"><h3 class="h5">Contacto</h3><p>0983067670<br />domusfuego@gmail.com</p></div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- VISTA 2: CARTA -->
+      <section id="view-carta" class="view menu-page" data-view="carta" aria-labelledby="cartaTitle" hidden>
+        <div class="container">
+          <div class="menu-heading text-center">
+            <p class="eyebrow">Parrilla • Steakhouse • BBQ</p>
+            <img src="assets/DFLOGO.svg" width="72" height="72" alt="" aria-hidden="true" />
+            <h1 id="cartaTitle" tabindex="-1">Nuestra carta</h1>
+            <p class="menu-subtitle">Para los amantes del fuego y la buena carne</p>
+          </div>
           <div class="store-layout">
             <section class="catalog-panel" aria-labelledby="catalogTitle">
               <div class="catalog-toolbar">
                 <div>
-                  <p class="eyebrow">Carta de la casa</p>
-                  <h2 id="catalogTitle">Elige algo del fuego</h2>
-                  <p id="catalogUpdated" class="catalog-updated" role="status">Cargando catálogo…</p>
+                  <h2 id="catalogTitle">Carta de la casa</h2>
+                  <p class="catalog-updated" id="catalogUpdated" aria-live="polite">Cargando productos…</p>
                 </div>
-                <label class="filter-label" for="categoryFilter">Categoría
-                  <select id="categoryFilter" class="form-select">
-                    <option value="all">Todas</option>
-                  </select>
+                <label class="filter-label" for="categoryFilter">
+                  Categoría
+                  <select id="categoryFilter" class="form-select"><option value="all">Todas</option></select>
                 </label>
               </div>
-              <p id="catalogMessage" class="catalog-message" role="status" aria-live="polite"></p>
-              <div id="productGrid" class="product-grid" aria-live="polite" aria-busy="true"></div>
+              <p class="catalog-message" id="catalogMessage" role="status" aria-live="polite"></p>
+              <div id="productGrid" class="product-grid" aria-busy="true"></div>
             </section>
-
-            <aside id="cartPanel" class="cart-panel" aria-labelledby="cartTitle">
-              <div class="cart-heading">
-                <h2 id="cartTitle">Tu pedido</h2>
-                <span id="cartItemCount" class="cart-item-count">0 artículos</span>
-              </div>
-              <ul id="cartItems" class="cart-items" aria-live="polite"></ul>
-              <p id="emptyCart" class="empty-cart">Tu carrito está vacío.</p>
-              <dl class="cart-totals">
-                <div><dt>Subtotal</dt><dd id="cartSubtotal">$0.00</dd></div>
-                <div class="cart-total"><dt>Total</dt><dd id="cartTotal">$0.00</dd></div>
-              </dl>
-              <button id="checkoutButton" class="btn btn-danger full-width mb-2" type="button">Confirmar pedido</button>
-              <button id="clearCart" class="btn btn-secondary full-width" type="button">Vaciar carrito</button>
-            </aside>
           </div>
+        </div>
+      </section>
 
-          <dialog id="checkoutDialog" aria-labelledby="checkoutTitle">
-            <form id="checkoutForm" class="checkout-form">
-              <h2 id="checkoutTitle">Confirmar tu pedido</h2>
-              <label class="form-label" for="checkoutName">Nombre completo</label>
-              <input class="form-control mb-2" id="checkoutName" name="nombre" type="text" autocomplete="name" required />
-              <label class="form-label" for="checkoutPhone">Teléfono</label>
-              <input class="form-control mb-2" id="checkoutPhone" name="telefono" type="tel" autocomplete="tel" placeholder="0991234567" />
-              <label class="form-label" for="checkoutEmail">Correo (opcional si ya diste teléfono)</label>
-              <input class="form-control mb-3" id="checkoutEmail" name="email" type="email" autocomplete="email" placeholder="correo@dominio.com" />
-              <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-danger">Enviar pedido</button>
-                <button type="button" id="cancelCheckout" class="btn btn-secondary">Cancelar</button>
+      <!-- VISTA 3: RESERVAS (requiere sesión) -->
+      <section id="view-reservas" class="view section-pad" data-view="reservas" aria-labelledby="reservasTitle" hidden>
+        <div class="container">
+          <div class="section-head centered">
+            <p class="eyebrow">Reserva tu mesa</p>
+            <h1 id="reservasTitle" class="section-title" tabindex="-1">Reservas</h1>
+            <p class="section-subtitle">Elige fecha, hora y comensales. Necesitas una cuenta para confirmar.</p>
+          </div>
+          <div class="row justify-content-center">
+            <div class="col-lg-7">
+              <form id="reservationForm" class="catalog-panel app-form">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label" for="reservationFecha">Fecha</label>
+                    <input class="form-control" type="date" id="reservationFecha" name="fecha" required />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="reservationHora">Hora</label>
+                    <input class="form-control" type="time" id="reservationHora" name="hora" required />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="reservationComensales">Comensales</label>
+                    <input class="form-control" type="number" id="reservationComensales" name="comensales" min="1" max="20" value="2" required />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="reservationTelefono">Teléfono</label>
+                    <input class="form-control" type="tel" id="reservationTelefono" name="telefono" maxlength="30" />
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label" for="reservationObservaciones">Observaciones</label>
+                    <textarea class="form-control" id="reservationObservaciones" name="observaciones" rows="2" maxlength="500"></textarea>
+                  </div>
+                </div>
+                <button class="btn btn-warning mt-3" type="submit"><i class="bi bi-calendar-check me-1"></i>Confirmar reserva</button>
+                <p class="catalog-updated mt-2 mb-0">¿Aún no tienes cuenta? Al confirmar te llevamos al inicio de sesión y puedes crearla allí.</p>
+                <p id="reservationFeedback" class="catalog-message" role="status" aria-live="polite"></p>
+              </form>
+              <div class="text-center mt-3">
+                <button type="button" class="btn btn-link text-warning" data-view="cuenta">Ver mis reservas y mi historial</button>
               </div>
-              <div class="checkout-feedback mt-2" id="checkoutFeedback" role="status" aria-live="polite"></div>
-            </form>
-          </dialog>
-
-          <div class="menu-columns">
-            <div class="menu-column">
-              <section class="menu-category" aria-labelledby="wingsTitle">
-                <h2 id="wingsTitle">Alitas</h2>
-                <ul class="menu-list">
-                  <li><span>BBQ <small>6 alitas</small></span><strong>$6.90</strong></li>
-                  <li><span>Jack Daniels <small>12 alitas</small></span><strong>$12.90</strong></li>
-                  <li><span>Honey Mustang <small>24 alitas</small></span><strong>$20.90</strong></li>
-                </ul>
-                <p class="menu-note">Todas acompañadas de mini bastones de zanahoria y apio, salsa ranch y papas fritas.</p>
-              </section>
-
-              <section class="menu-category" aria-labelledby="potatoesTitle">
-                <h2 id="potatoesTitle">Papas especiales</h2>
-                <ul class="menu-list">
-                  <li><span>Salchipapa</span><strong>$2.50</strong></li>
-                  <li><span>Papas Tex-Mex</span><strong>$5.00</strong></li>
-                  <li><span>Papas Cheddar</span><strong>$6.50</strong></li>
-                </ul>
-              </section>
-
-              <section class="menu-category" aria-labelledby="nachosTitle">
-                <h2 id="nachosTitle">Nachos</h2>
-                <ul class="menu-list">
-                  <li><span>Tex-Mex <small>Totopos, carne molida, guacamole, pico de gallo</small></span><strong>$4.00</strong></li>
-                  <li><span>Cheese <small>Totopos, carne molida, queso cheddar, pico de gallo y mayonesa</small></span><strong>$5.00</strong></li>
-                </ul>
-              </section>
-
-              <section class="menu-category" aria-labelledby="burgersTitle">
-                <h2 id="burgersTitle">Hamburguesas</h2>
-                <p class="menu-note">Todas incluyen papas fritas.</p>
-                <ul class="menu-list">
-                  <li><span>Simple <small>Carne de res, lechuga, tomate, mayonesa y queso holandés</small></span><strong>$5.00</strong></li>
-                  <li><span>Cheddar <small>Carne de res, lechuga, tomate, mayonesa y queso cheddar líquido</small></span><strong>$6.00</strong></li>
-                  <li><span>Bacon <small>Carne de res, lechuga, tomate, mayonesa, queso holandés y bacon</small></span><strong>$6.00</strong></li>
-                  <li><span>Doble <small>2 carnes de res, 2 quesos holandeses, lechuga, tomate, mayonesa, cebolla caramelizada y salsa de champiñón</small></span><strong>$9.00</strong></li>
-                </ul>
-              </section>
-
-              <section class="menu-category" aria-labelledby="softDrinksTitle">
-                <h2 id="softDrinksTitle">Bebidas soft</h2>
-                <ul class="menu-list">
-                  <li><span>Gaseosa</span><strong>$1.50</strong></li>
-                  <li><span>Té helado</span><strong>$1.75</strong></li>
-                  <li><span>Agua mineral</span><strong>$1.50</strong></li>
-                  <li><span>Agua natural</span><strong>$1.25</strong></li>
-                </ul>
-              </section>
-
-              <section class="menu-category" aria-labelledby="lemonadeTitle">
-                <h2 id="lemonadeTitle">Limonadas</h2>
-                <ul class="menu-list">
-                  <li><span>Limonada de coco</span><strong>$2.50</strong></li>
-                  <li><span>Limonada de frutilla</span><strong>$2.50</strong></li>
-                  <li><span>Limonada de hierbabuena</span><strong>$2.50</strong></li>
-                  <li><span>Limonada imperial</span><strong>$2.25</strong></li>
-                  <li><span>Limonada clásica</span><strong>$2.00</strong></li>
-                </ul>
-              </section>
-
-              <section class="menu-category" aria-labelledby="juicesTitle">
-                <h2 id="juicesTitle">Jugos naturales</h2>
-                <ul class="menu-list">
-                  <li><span>Mora</span><strong>$2.25</strong></li>
-                  <li><span>Frutilla</span><strong>$2.25</strong></li>
-                  <li><span>Guanábana</span><strong>$2.25</strong></li>
-                  <li><span>Maracuyá</span><strong>$2.25</strong></li>
-                </ul>
-              </section>
-
-              <section class="menu-category" aria-labelledby="beerTitle">
-                <h2 id="beerTitle">Cervezas</h2>
-                <p class="menu-note">Individuales</p>
-                <ul class="menu-list">
-                  <li><span>Pilsener litro</span><strong>$4.50</strong></li>
-                  <li><span>Club litro</span><strong>$5.00</strong></li>
-                </ul>
-                <p class="menu-note">Combos</p>
-                <ul class="menu-list">
-                  <li><span>3 Pilsener de litro</span><strong>$12.00</strong></li>
-                  <li><span>3 Club de litro</span><strong>$13.50</strong></li>
-                </ul>
-              </section>
-            </div>
-
-            <div class="menu-column">
-              <section class="menu-category" aria-labelledby="cutsTitle">
-                <h2 id="cutsTitle">Cortes uruguayos</h2>
-                <p class="menu-note">Todos incluyen ensalada fresca y papas a elección: fritas, asadas o cocinadas.</p>
-                <ul class="menu-list">
-                  <li><span>Picaña <small>250 g</small></span><strong>$18.00</strong></li>
-                  <li><span>Colita de cuadril <small>250 g</small></span><strong>$17.00</strong></li>
-                  <li><span>Rib eye <small>250 g</small></span><strong>$18.00</strong></li>
-                </ul>
-              </section>
-
-              <section class="menu-category" aria-labelledby="grillsTitle">
-                <h2 id="grillsTitle">Parrilladas</h2>
-                <ul class="menu-list">
-                  <li><span>Parrillada personal <small>Filete de pollo, chuleta de lomo, chorizo y morcilla; ensalada fresca y papas a elección</small></span><strong>$7.00</strong></li>
-                  <li><span>Parrillada personal completa <small>Filete de pollo, chuleta de lomo, carne, chorizo y morcilla; ensalada fresca y papas a elección</small></span><strong>$9.90</strong></li>
-                  <li><span>Parrillada para dos <small>2 filetes de pollo, 2 chuletas de lomo, 2 carnes, 2 chorizos, 2 morcillas, ensalada fresca grande y papas a elección</small></span><strong>$18.00</strong></li>
-                </ul>
-              </section>
-
-              <section class="menu-category" aria-labelledby="roastsTitle">
-                <h2 id="roastsTitle">Asados individuales</h2>
-                <ul class="menu-list">
-                  <li><span>Pollo <small>Filete de pollo, chorizo y ensalada fresca; papas a elección</small></span><strong>$5.50</strong></li>
-                  <li><span>Carne <small>Carne, chorizo y ensalada fresca; papas a elección</small></span><strong>$5.50</strong></li>
-                  <li><span>Cerdo <small>Chuleta de pierna, chorizo y ensalada fresca; papas a elección</small></span><strong>$5.50</strong></li>
-                </ul>
-              </section>
-
-              <section class="menu-category" aria-labelledby="cocktailsTitle">
-                <h2 id="cocktailsTitle">Drinks / Cócteles</h2>
-                <h3>Vodka</h3>
-                <ul class="menu-list">
-                  <li><span>Moscow Mule <small>Vodka, ginger ale, limón y sirope simple</small></span><strong>$6.00</strong></li>
-                  <li><span>Destornillador (Screwdriver) <small>Vodka y jugo de naranja</small></span><strong>$5.00</strong></li>
-                  <li><span>Vodka Tonic <small>Vodka, agua tónica y limón</small></span><strong>$5.00</strong></li>
-                </ul>
-                <h3>Ron (blanco)</h3>
-                <ul class="menu-list">
-                  <li><span>Mojito <small>Ron blanco, hierbabuena, limón, sirope simple y soda</small></span><strong>$6.00</strong></li>
-                  <li><span>Cuba Libre <small>Ron, Coca-Cola y limón</small></span><strong>$5.00</strong></li>
-                  <li><span>Piña Colada <small>Ron blanco, jugo de piña, licor de coco, crema de leche y sirope simple</small></span><strong>$6.00</strong></li>
-                </ul>
-                <h3>Tequila</h3>
-                <ul class="menu-list">
-                  <li><span>Margarita <small>Tequila, limón y triple sec</small></span><strong>$5.00</strong></li>
-                  <li><span>Tequila Sunrise <small>Tequila, jugo de naranja y granadina</small></span><strong>$6.00</strong></li>
-                  <li><span>Paloma <small>Tequila, refresco de toronja y limón</small></span><strong>$6.00</strong></li>
-                </ul>
-                <h3>Gin</h3>
-                <ul class="menu-list">
-                  <li><span>Gin Tonic <small>Gin, agua tónica y limón</small></span><strong>$5.00</strong></li>
-                  <li><span>Tom Collins <small>Gin, limón, sirope simple y soda</small></span><strong>$6.00</strong></li>
-                  <li><span>Gin Fizz <small>Gin, limón, sirope simple, soda y clara de huevo</small></span><strong>$6.00</strong></li>
-                </ul>
-                <h3>Whisky</h3>
-                <ul class="menu-list">
-                  <li><span>Whisky Sour <small>Whisky, limón y sirope simple</small></span><strong>$6.00</strong></li>
-                  <li><span>Whisky Americano <small>Whisky y Coca-Cola</small></span><strong>$5.00</strong></li>
-                  <li><span>Highball <small>Whisky y ginger ale</small></span><strong>$6.00</strong></li>
-                  <li><span>Padrino <small>Whisky y amaretto</small></span><strong>$6.00</strong></li>
-                </ul>
-              </section>
-
-              <section class="menu-category" aria-labelledby="winesTitle">
-                <h2 id="winesTitle">Vinos</h2>
-                <ul class="menu-list">
-                  <li><span>Sangría <small>Copa</small></span><strong>$6.00</strong></li>
-                  <li><span>Sangría <small>Jarra</small></span><strong>$18.00</strong></li>
-                  <li><span>Tinto de verano <small>Copa</small></span><strong>$5.00</strong></li>
-                </ul>
-              </section>
             </div>
           </div>
-          <p class="menu-footer">Domus Fuego · Para los amantes del fuego y la buena carne</p>
+        </div>
+      </section>
+
+      <!-- VISTA 4: LOGIN / CREAR CUENTA -->
+      <section id="view-auth" class="view section-pad" data-view="auth" aria-labelledby="authTitle" hidden>
+        <div class="container">
+          <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+              <div class="catalog-panel app-form">
+                <div class="text-center mb-4">
+                  <img src="assets/DFLOGO.svg" width="64" height="64" alt="" aria-hidden="true" />
+                  <h1 id="authTitle" class="h2 mt-3" tabindex="-1">Iniciar sesión</h1>
+                  <p class="catalog-updated">Necesitas una cuenta para reservar.</p>
+                </div>
+                <div class="btn-group w-100 mb-3" role="group" aria-label="Modo de cuenta">
+                  <button type="button" class="btn btn-outline-warning active" id="showLogin">Iniciar sesión</button>
+                  <button type="button" class="btn btn-outline-warning" id="showRegister">Crear cuenta</button>
+                </div>
+                <form id="loginForm">
+                  <div class="mb-3">
+                    <label class="form-label" for="loginEmail">Correo</label>
+                    <input class="form-control" type="email" id="loginEmail" name="email" autocomplete="email" required />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="loginPassword">Contraseña</label>
+                    <input class="form-control" type="password" id="loginPassword" name="password" autocomplete="current-password" required />
+                  </div>
+                  <button class="btn btn-warning w-100" type="submit">Entrar</button>
+                </form>
+                <form id="registerForm" hidden>
+                  <div class="mb-3">
+                    <label class="form-label" for="registerNombre">Nombre</label>
+                    <input class="form-control" type="text" id="registerNombre" name="nombre" autocomplete="name" required minlength="2" />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="registerEmail">Correo</label>
+                    <input class="form-control" type="email" id="registerEmail" name="email" autocomplete="email" required />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="registerPassword">Contraseña</label>
+                    <input class="form-control" type="password" id="registerPassword" name="password" autocomplete="new-password" required minlength="4" />
+                  </div>
+                  <button class="btn btn-warning w-100" type="submit">Crear cuenta</button>
+                </form>
+                <p id="authFeedback" class="catalog-message" role="alert" aria-live="polite"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VISTA 5: MI CUENTA / HISTORIAL -->
+      <section id="view-cuenta" class="view section-pad" data-view="cuenta" aria-labelledby="cuentaTitle" hidden>
+        <div class="container">
+          <div class="section-head d-flex flex-wrap justify-content-between align-items-end gap-3">
+            <div>
+              <p class="eyebrow">Mi cuenta</p>
+              <h1 id="cuentaTitle" class="section-title" tabindex="-1">Mis reservas</h1>
+              <p id="cuentaNombre" class="section-subtitle"></p>
+            </div>
+            <button type="button" id="logoutButton" class="btn btn-outline-warning">Cerrar sesión</button>
+          </div>
+          <div class="row g-4">
+            <div class="col-lg-6">
+              <h2 class="h4">Reservas vigentes</h2>
+              <div id="vigentesList" class="catalog-panel history-list"><p class="catalog-updated">Cargando…</p></div>
+            </div>
+            <div class="col-lg-6">
+              <h2 class="h4">Historial</h2>
+              <div id="historialList" class="catalog-panel history-list"><p class="catalog-updated">Cargando…</p></div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
 
-    <footer id="contacto" class="bg-dark text-light border-top border-warning-subtle py-5">
-      <div class="container row g-4 mx-auto">
-        <div class="col-lg-4">
-          <div class="d-flex align-items-center gap-2">
-            <img src="assets/DFLOGO.svg" width="62" height="62" class="rounded-circle border border-warning" alt="Logo de Domus Fuego" loading="lazy" />
-            <div><strong class="d-block">Domus Fuego</strong><small class="text-warning">Parrilla • Steakhouse • BBQ</small></div>
+    <!-- Ventana de confirmación al crear una reserva; al cerrarse abre el historial. -->
+    <div class="modal fade" id="reservationSuccessModal" tabindex="-1" aria-labelledby="reservationSuccessTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content app-form">
+          <div class="modal-header border-warning-subtle">
+            <h2 class="modal-title h4" id="reservationSuccessTitle">
+              <i class="bi bi-check-circle-fill text-warning me-2" aria-hidden="true"></i>¡Reserva confirmada!
+            </h2>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <p id="reservationSuccessDetail" class="mb-0"></p>
+            <p class="catalog-updated mt-3 mb-0">A continuación verás tus reservas vigentes y tu historial.</p>
+          </div>
+          <div class="modal-footer border-warning-subtle">
+            <button type="button" class="btn btn-warning" data-bs-dismiss="modal">Ver mi historial</button>
           </div>
         </div>
-        <div class="col-lg-4">
-          <h2 class="h4">Contacto</h2>
-          <ul class="list-unstyled text-secondary">
-            <li>García Moreno E2-55 y, 170901 Quito</li>
-            <li><a href="tel:0983067670">0983067670</a></li>
-            <li><a href="mailto:domusfuego@gmail.com">domusfuego@gmail.com</a></li>
-            <li>@domusfuego</li>
-          </ul>
+      </div>
+    </div>
+
+    <!-- Accesibilidad disponible en todas las vistas públicas. -->
+    <button type="button" class="a11y-fab" id="a11yFab" aria-label="Abrir opciones de accesibilidad" aria-expanded="false" aria-controls="a11yPublicPanel">
+      <i class="bi bi-universal-access" aria-hidden="true"></i>
+      <span>Accesibilidad</span>
+    </button>
+    <div class="a11y-public-panel" id="a11yPublicPanel" hidden role="group" aria-label="Opciones de accesibilidad">
+      <label><input type="checkbox" id="a11yPublicLarge" /> Texto grande</label>
+      <label><input type="checkbox" id="a11yPublicContrast" /> Alto contraste</label>
+      <label><input type="checkbox" id="a11yPublicReduced" /> Reducir movimiento</label>
+      <label>Velocidad de animaciones
+        <select id="a11yPublicSpeed">
+          <option value="normal">Normal</option>
+          <option value="lenta">Lenta</option>
+          <option value="sin">Sin movimiento</option>
+        </select>
+      </label>
+    </div>
+    <div class="sr-only" id="publicA11yStatus" role="status" aria-live="polite"></div>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="row gy-4 align-items-start">
+          <div class="col-md-4">
+            <img src="assets/DFLOGO.svg" width="64" height="64" alt="Logo de Domus Fuego" />
+            <h2 class="h4 mt-3">Domus Fuego</h2>
+            <p class="mb-0">Parrilla, cortes uruguayos y bebidas en Quito.</p>
+          </div>
+          <div class="col-md-4">
+            <h2 class="h5">Horarios</h2>
+            <p class="mb-1">Martes a domingo: 12:00 – 22:00</p>
+            <p class="mb-0">Lunes: cerrado</p>
+          </div>
+          <div class="col-md-4">
+            <h2 class="h5">Contáctanos</h2>
+            <p class="mb-1"><i class="bi bi-geo-alt"></i> Parroquia de la Concepción, Quito</p>
+            <p class="mb-1"><i class="bi bi-telephone"></i> 0983067670</p>
+            <p class="mb-0"><i class="bi bi-envelope"></i> domusfuego@gmail.com</p>
+          </div>
         </div>
-        <div class="col-lg-4">
-          <h2 class="h4">Horarios</h2>
-          <ul class="list-unstyled text-secondary">
-            <li>Lun - Vie: 12:00 - 23:30</li>
-            <li>Sáb - Dom: 13:00 - 00:30</li>
-          </ul>
-        </div>
-        <div class="col-lg-6">
-          <h2 class="h4">Escríbenos</h2>
-          <form id="contactForm" novalidate>
-            <label class="form-label" for="contactName">Nombre</label>
-            <input class="form-control mb-2" id="contactName" name="nombre" autocomplete="name" required pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+([ '-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*" aria-describedby="contactNameError" />
-            <small id="contactNameError" class="field-error" hidden>Escribe un nombre válido, usando letras y separadores comunes.</small>
-            <label class="form-label mt-3" for="contactEmail">Correo electrónico</label>
-            <input class="form-control mb-2" id="contactEmail" name="correo" type="email" autocomplete="email" required aria-describedby="contactEmailError" />
-            <small id="contactEmailError" class="field-error" hidden>Escribe un correo válido, por ejemplo nombre@dominio.com.</small>
-            <label class="form-label mt-3" for="contactMessage">Mensaje</label>
-            <textarea class="form-control mb-3" id="contactMessage" name="mensaje" rows="3" required minlength="10" aria-describedby="contactMessageError"></textarea>
-            <small id="contactMessageError" class="field-error" hidden>El mensaje debe tener al menos 10 caracteres.</small>
-            <button class="btn btn-primary" type="submit">Enviar mensaje</button>
-            <p id="contactFeedback" class="contact-feedback" role="status" aria-live="polite"></p>
-          </form>
-        </div>
+        <p class="text-center mt-4 mb-0 small opacity-75">© Domus Fuego. Todos los derechos reservados.</p>
       </div>
     </footer>
 

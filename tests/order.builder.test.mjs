@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { OrderBuilder } from '../netlify/functions/_shared/order.builder.mjs';
+import { OrderBuilder } from '../src/domain/order.builder.js';
 
 test('calcula el total a partir de cantidad × precio unitario', () => {
   const order = new OrderBuilder(7)

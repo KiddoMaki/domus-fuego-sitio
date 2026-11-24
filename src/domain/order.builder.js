@@ -1,3 +1,4 @@
+// Regla de negocio pura: arma el pedido y calcula el total con precios del servidor.
 export class OrderBuilder {
   constructor(customerId) {
     this.order = { customerId, items: [] };

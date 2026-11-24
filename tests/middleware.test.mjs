@@ -1,38 +1,71 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { requireFields, parseJson, compose } from '../netlify/functions/_shared/middleware.mjs';
+import { sanitize } from '../src/middleware/sanitize.js';
+import { paginate } from '../src/middleware/pagination.js';
+import { requireContact, schemas, validate } from '../src/middleware/validate.js';
 
-const makeCtx = (body) => ({ event: { body: body ? JSON.stringify(body) : undefined, headers: {} } });
+const context = (req = {}) => {
+  req.body ??= {};
+  req.query ??= {};
+  req.params ??= {};
+  return req;
+};
 
-test('requireFields devuelve 422 con los campos faltantes', async () => {
-  const mw = requireFields('name', 'email');
-  const ctx = makeCtx({ name: 'Luis' });
-  ctx.body = { name: 'Luis' };
-  const res = await mw(ctx, async () => ({ statusCode: 200, body: '{}' }));
-  assert.equal(res.statusCode, 422);
-  assert.match(res.body, /email/);
+const run = (middleware, req) => new Promise((resolve) => {
+  middleware(req, {}, (error) => resolve(error));
+  if (!req.__done) setImmediate(() => resolve(undefined));
 });
 
-test('requireFields deja pasar cuando todo está presente', async () => {
-  const mw = requireFields('name');
-  const ctx = makeCtx({ name: 'Luis' });
-  ctx.body = { name: 'Luis' };
-  const res = await mw(ctx, async () => ({ statusCode: 200, body: 'ok' }));
-  assert.equal(res.statusCode, 200);
+test('sanitize recorta y elimina caracteres de control sin mutar req.body', () => {
+  const req = context({ body: { name: '  Luis\u0007 ' } });
+  sanitize(req, {}, () => { req.__done = true; });
+  assert.equal(req.sanitized.body.name, 'Luis');
+  assert.equal(req.body.name, '  Luis\u0007 ');
 });
 
-test('parseJson rechaza JSON inválido con 400', async () => {
-  const ctx = { event: { body: '{no es json', headers: {} } };
-  const res = await parseJson(ctx, async () => ({ statusCode: 200, body: 'ok' }));
-  assert.equal(res.statusCode, 400);
+test('validate acepta un body anidado válido', async () => {
+  const req = context();
+  req.sanitized = {
+    body: {
+      customer: { name: 'Luis', email: 'luis@example.com' },
+      items: [{ product_id: 1, quantity: 2 }],
+    },
+    query: {}, params: {},
+  };
+  const error = await run(validate({ body: schemas.orderBody, check: requireContact }), req);
+  assert.equal(error, undefined);
+  assert.equal(req.valid, req.sanitized);
 });
 
-test('compose ejecuta los middleware en orden', async () => {
-  const order = [];
-  const a = async (ctx, next) => { order.push('a'); return next(); };
-  const b = async (ctx, next) => { order.push('b'); return { statusCode: 200, body: 'done' }; };
-  const handler = compose(a, b);
-  const res = await handler({ headers: {} }, {});
-  assert.equal(res.body, 'done');
-  assert.deepEqual(order, ['a', 'b']);
+test('validate devuelve 422 con los campos faltantes', async () => {
+  const req = context();
+  req.sanitized = {
+    body: { customer: { name: 'L' }, items: [{ product_id: 'x' }] },
+    query: {}, params: {},
+  };
+  const error = await run(validate({ body: schemas.orderBody, check: requireContact }), req);
+  assert.equal(error.status, 422);
+  assert.match(error.message, /customer\.email|customer\.phone/);
+  assert.match(error.message, /items\[\]\.product_id/);
+});
+
+test('paginate limita page y limit', () => {
+  const req = context();
+  req.sanitized = { query: { page: '-3', limit: '999' }, body: {}, params: {} };
+  paginate({ defaultLimit: 50, maxLimit: 100 })(req, {}, () => {});
+  assert.deepEqual(req.pagination, { page: 1, limit: 100, offset: 0 });
+});
+
+test('validate rechaza una fecha con formato inválido', async () => {
+  const req = context();
+  req.sanitized = {
+    body: {
+      customer: { name: 'Luis', phone: '0983000000' },
+      fecha: '24/11/2026', hora: '19:30', comensales: 2,
+    },
+    query: {}, params: {},
+  };
+  const error = await run(validate({ body: schemas.reservationBody }), req);
+  assert.equal(error.status, 422);
+  assert.match(error.message, /fecha/);
 });

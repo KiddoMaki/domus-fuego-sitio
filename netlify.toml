@@ -4,22 +4,8 @@
 [functions]
   directory = "netlify/functions"
 
-[[redirects]]
-  from = "/api/products/:id"
-  to = "/.netlify/functions/products?id=:id"
-  status = 200
-
-[[redirects]]
-  from = "/api/orders/:id"
-  to = "/.netlify/functions/orders?id=:id"
-  status = 200
-
-[[redirects]]
-  from = "/api/reservations/:id"
-  to = "/.netlify/functions/reservations?id=:id"
-  status = 200
-
+# Una sola Function sirve la app Express completa: las rutas viven en src/routes.
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  to = "/.netlify/functions/api"
   status = 200

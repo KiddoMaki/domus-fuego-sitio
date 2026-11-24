@@ -1,26 +1,31 @@
 # Domus Fuego — Sitio web + pedidos y reservas (demo con persistencia real)
 
-> **Estado:** frontend + backend funcionando de punta a punta. Catálogo, pedidos y reservas se
-> guardan en **Neon (PostgreSQL)** usando tu esquema `db/schema.sql` (DOMUS.sql). Productos,
-> precios y disponibilidad siguen siendo **DEMO** pendientes de confirmación del propietario.
-> Sin pagos en línea (las ventas se generan en caja, tabla `venta`/`caja_sesion`).
+> **Estado:** frontend + backend + panel administrativo funcionando de punta a punta. Catálogo,
+> pedidos, reservas, cuentas y administración se guardan en **Neon (PostgreSQL)** usando
+> `DomusDBs.sql`. Productos y precios son la carta cargada en la BD. Sin pagos en línea
+> (las ventas se cierran en caja, tablas `caja_sesion`/`venta`).
 
-## Arquitectura (MVC, guía `GUIA_NUEVO_ECOMMERCE_MVC_CORS_CORREGIDO.md`)
+## Arquitectura (n-capas: routes → controllers → services → models → database)
 
 ```text
-public/                 Vista: HTML semántico y accesible
-  index.html            Landing + menú/catálogo + carrito + reserva
-  styles.css            Tema premium oscuro (dorado, contraste AA)
-  js/app.js             Consume /api/*; carrito en localStorage (total real lo calcula el servidor)
-netlify/functions/      Controladores REST (Netlify Functions, TypeScript-free .mjs)
-  products.mjs          GET /api/products (?category=, ?q=, ?meta=categories) y ?id=
-  orders.mjs            POST /api/orders (crea pedido + pedido_detalle) · GET /api/orders?id=
-  reservations.mjs      POST /api/reservations (asigna mesa por capacidad y disponibilidad) · GET ?id=
-  _shared/              Modelo: db.mjs (pool, driver @neondatabase/serverless), repositories,
-                        Factory, OrderBuilder, middleware (CORS, JSON, validación, errores)
-db/schema.sql           Tu esquema completo (35 tablas, 4 vistas, constraints incl. EXCLUDE gist)
-db/seed_demo.sql        SEED DEMO — carta propuesta, NO oficial (ver PENDIENTES_NEGOCIO.md)
-tests/                  node --test (OrderBuilder, middleware)
+public/                 Vista (SPA + panel)
+  index.html            Esencia, carta, reservas, login e historial
+  admin.html            Panel administrativo (UI del repo domus-admin, conectada a /api/admin)
+  assets/styles.css     Tema público (oscuro/dorado, contraste AA)
+  assets/admin.css      Tema del panel
+  js/app.js             Consume /api/*; redirige a /admin.html si el rol es ADMINISTRADOR
+  js/admin.js           Carga datos reales del panel y gestiona altas/ediciones/bajas
+src/                    Backend en capas (JavaScript)
+  routes/               Rutas Express: /api/products, /orders, /reservations, /auth, /admin
+  controllers/          Traducen req/res hacia servicios
+  services/             Reglas de negocio y traducción de errores HTTP
+  models/               Consultas Drizzle (incluye admin.model.js con acceso a 35 tablas)
+  database/             connection.js (pool Neon) + schema.js (esquema Drizzle)
+  middleware/           requestId, logs, CORS, sanitize, validate, paginate, JWT, roles, errores
+  domain/               Reglas puras (OrderBuilder)
+netlify/functions/      Adaptadores delgados: api.mjs (catch-all /api/*)
+db/migrations/          002_carta_fields.sql y 003_auth.sql (roles y usuario KIDDO)
+tests/                  node --test (14 pruebas)
 ```
 
 Mapa al esquema DOMUS:
@@ -31,41 +36,83 @@ Mapa al esquema DOMUS:
   reservas pendientes/confirmadas en la misma fecha y hora). Sin disponibilidad → **409**.
 - Sin tabla de reseñas: `DOMUS.sql` no la incluye, así que **no** hay reseñas (no se inventó DDL).
 
+## API de administración (Postman)
+
+Todas requieren `Authorization: Bearer <token>` y rol `ADMINISTRADOR` (obtenido con
+`POST /api/auth/login`). Si el token falta o es de cliente: 401/403.
+
+| Método | Ruta | Uso |
+| --- | --- | --- |
+| GET | `/api/admin/overview` | Métricas generales |
+| GET | `/api/admin/catalog` | Catálogo con precio vigente |
+| GET | `/api/admin/reservations` | Reservas con cliente y mesa |
+| PATCH | `/api/admin/reservations/:id/estado` | `{ "estado": "pendiente|confirmada|cancelada|cumplida|no_asistio" }` |
+| GET | `/api/admin/orders` | Pedidos con total calculado |
+| PATCH | `/api/admin/orders/:id/estado` | `{ "estado": "abierto|en_preparacion|servido|cerrado|cancelado" }` |
+| GET | `/api/admin/users` | Usuarios con roles |
+| POST | `/api/admin/users` | Alta de usuario: `{ nombre, email, password, rol }` |
+| GET | `/api/admin/inventory` | Lotes con categoría, política, stock y valorización |
+| GET | `/api/admin/purchases` | Órdenes de compra con proveedor, recepciones y total |
+| GET | `/api/admin/production` | Órdenes de producción con receta, costos y merma |
+| GET | `/api/admin/sales` | Ventas con caja, medios de pago y total |
+| GET | `/api/admin/finance` | Movimientos contables reales |
+| GET | `/api/admin/cash` | Sesiones de caja |
+| GET | `/api/admin/audit` | Métricas reales del esquema en Neon |
+| GET | `/api/admin/tables` | Listado de tablas administrables y su PK |
+| GET | `/api/admin/data/:table` / `.../schema` / `.../:id` | Consulta genérica de tablas permitidas |
+| POST / PATCH / DELETE | `/api/admin/data/:table[/:id]` | Altas, ediciones y bajas genéricas |
+
 ## Uso local
 
 ```sh
 npm install
-# .env con DATABASE_URL (pooler) — nunca se commitea (está en .gitignore)
+# .env con DATABASE_URL (pooler) y JWT_SECRET — nunca se commitea (.gitignore)
 npm run dev        # netlify dev → http://localhost:8888
-npm test           # 8 pruebas unitarias
+npm run dev:api    # API Express directa → http://localhost:3000/api
+npm test           # 14 pruebas
+npm run seed:operativo  # datos operativos de prueba en Neon (no toca la carta)
 ```
+
+Cuentas de prueba: administrador `kiddo@domusfuego.local` / `1234` (rol `ADMINISTRADOR`),
+cliente `ana@example.com` / `1234` (rol `CLIENTE`). Al iniciar sesión como administrador,
+la SPA abre `/admin.html`; los clientes vuelven a Reservas o a la vista pendiente.
+
+El panel precarga todos los módulos antes de mostrarlos: cambiar de pestaña no vuelve a consultar
+la API ni muestra valores demo. La pestaña activa se conserva al recargar (`sessionStorage`). En
+**Mesas & Reservas**, modificar el combo de estado revela un botón **Actualizar estado**; el cambio
+solo se guarda al pulsarlo. El panel y el sitio público incluyen controles de texto grande, alto
+contraste, reducción de movimiento y velocidad de animaciones, con foco visible y objetivos táctiles
+amplios en móvil.
 
 ## Producción
 
-- Netlify (sitio y Functions): https://domus-fuego-sitio.netlify.app
-- `DATABASE_URL`, `PUBLIC_SITE_URL`, `CORS_ALLOWED_ORIGINS` configuradas como variables de entorno en Netlify.
+- Netlify (sitio y Functions): https://domus-fuego-sitio.netlify.app — panel en `/admin.html`.
+- `DATABASE_URL`, `JWT_SECRET`, `PUBLIC_SITE_URL`, `CORS_ALLOWED_ORIGINS` configuradas en Netlify.
 - Despliegue: `netlify deploy --prod`
-- Neon: proyecto `ECOMERCE-OPTIMIZACION` (branch `main`, `neondb`), **solo** el esquema DOMUS + seed DEMO.
+- Neon: proyecto `empty-voice-61657813`, base `domus_fuego`, branch `production`.
 
 ## Decisiones y limitaciones
 
 - Se usa `@neondatabase/serverless` (443/HTTPS-WSS) en lugar de `pg` sobre 5432: el runner de esta
   máquina/red no alcanza el puerto 5432 y en serverless es más robusto.
-- `dns.setDefaultResultOrder('ipv4first')` en `db.mjs` evita `EAI_AGAIN` en redes IPv6-preferentes sin ruta.
+- `dns.setDefaultResultOrder('ipv4first')` en `src/database/connection.js` evita `EAI_AGAIN`.
+- Autenticación JWT propia (`JWT_SECRET`) + scrypt para contraseñas; roles leídos de `rolesxusuario`.
 - Carrito en `localStorage` (como el concepto original); el total que manda el navegador **no** se confía:
   el servidor recalcula precios desde `precio_venta`.
 - Reservas y pedidos son **solicitudes pendientes**, no confirmaciones operativas del restaurante.
-- Sin autenticación, sin pagos, sin panel admin. Ver `PENDIENTES_NEGOCIO.md`.
+- Sin pagos en línea; los pedidos y reservas quedan como solicitudes registradas en Neon.
 - GitHub Pages fue desactivado; el sitio vive en Netlify.
 
 ## Verificación realizada
 
-- `npm test`: 8/8 pasan.
-- `netlify dev` local: front 200; `GET /api/products?meta=categories` 200; catálogo por categoría/búsqueda 200;
-  `POST /api/orders` crea pedido (#total correcto, 22.50 USD) y `GET /api/orders?id=1` lo devuelve;
-  `POST /api/reservations` asigna mesa (#1 → mesa 3, cap. 4); validaciones 400/422 funcionan; datos de prueba borrados tras verificar.
-- Netlify API: deploy `ready` en producción (Front y Functions). **No se pudo abrir la URL de producción
-  desde esta máquina** (la red bloquea el egreso a `*.netlify.app`); verificar manualmente en un navegador.
+- `npm test`: 14/14 pasan.
+- Local: login admin/cliente, `/api/admin/*` con rol admin (200), cliente sin permiso (403),
+  CRUD genérico de `mesa` (crear/editar/borrar) y datos de prueba eliminados.
+- Producción: `/`, `/admin.html`, `/js/admin.js`, `/assets/admin.css`, `/js/app.js` y `/assets/styles.css`
+  responden 200; todos los `/api/admin/*` (overview, inventario, compras, producción, ventas,
+  finanzas, auditoría, reservas, pedidos, usuarios y mesas) responden 200 con token de administrador;
+  sin token responde 401. Deploy: `6b05a032ddd849fd02e14ade`.
+- Carta sin cambios: 8 ítems, 5 categorías, 8 presentaciones y 8 precios vigentes.
 
 ## Documentación de marca / negocio
 

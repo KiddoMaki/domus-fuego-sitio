@@ -4,12 +4,20 @@
   "type": "module",
   "scripts": {
     "dev": "netlify dev",
+    "dev:api": "node src/server.js",
+    "start": "node src/server.js",
     "build": "node -e \"process.stdout.write('static\\n')\"",
     "test": "node --test",
-    "seed": "node db/seed.mjs"
+    "seed": "node db/seed.mjs",
+    "seed:operativo": "node db/seed_operativo.mjs"
   },
   "dependencies": {
+    "@neon/config": "^1.14.6",
+    "@neon/env": "^2.1.9",
     "@neondatabase/serverless": "^1.2.1",
+    "drizzle-orm": "^0.45.4",
+    "express": "^5.3.0",
+    "serverless-http": "^3.2.0",
     "ws": "^8.23.0"
   }
 }
