@@ -15,7 +15,7 @@
 | Health check de la API | https://domus-fuego-sitio.netlify.app/api/health |
 | API Express local | http://localhost:3000/api (`npm run dev:api`) |
 | Proyecto en Netlify | https://app.netlify.com/projects/domus-fuego-sitio |
-| Deploy actual | https://app.netlify.com/projects/domus-fuego-sitio/deploys/6b05b63ee8f06e677cf92a5f |
+| Deploy actual | https://app.netlify.com/projects/domus-fuego-sitio/deploys/6b05bcc806d9746d3c58f57b |
 | Logs de Functions | https://app.netlify.com/projects/domus-fuego-sitio/logs/functions |
 | Repositorio en GitHub | https://github.com/KiddoMaki/domus-fuego-sitio |
 | Neon Console | https://console.neon.tech/ — proyecto `empty-voice-61657813`, base `domus_fuego`, rama `production` |
@@ -123,20 +123,37 @@ solo se guarda al pulsarlo. El panel y el sitio público incluyen controles de t
 contraste, reducción de movimiento y velocidad de animaciones, con foco visible y objetivos táctiles
 amplios en móvil.
 
-**Menú lateral desplegable.** Cada módulo (Compras & Proveedores, Producción & Recetas, etc.) es un
-botón con `aria-expanded` que abre un submenú con una opción por tabla/CRUD y por vista. Por ejemplo,
-**Compras & Proveedores** contiene *Resumen de compras, Proveedores, Órdenes de compra, Detalle de
-órdenes de compra, Recepciones* y *Detalle de recepciones*. Al elegir una tabla se abre un explorador
-genérico con todas sus columnas y **Nuevo / Editar / Eliminar**; las filas de tablas maestro tienen
-además **Ver detalle**, que filtra la tabla hija por la llave foránea (OC → detalle de OC →
-recepciones del detalle). El botón *Nueva línea* del detalle precarga automáticamente esa llave.
-**Catálogos y Tablas** reúne las 38 tablas administrables en un solo desplegable con filtro.
+**Menú lateral desplegable.** Cada módulo es un botón con `aria-expanded` que abre un submenú con
+sus vistas y operaciones. El menú incluye once módulos más **Cargues de Inventario** (entre Producción
+y Mesas). Las entidades cabecera-detalle ya no se muestran como tablas sueltas: *Órdenes de compra*,
+*Recepciones*, *Reservas*, *Pedidos*, *Recetas*, *Costos de recetas* y *Órdenes de producción* abren
+una cabecera legible (proveedor, cliente, mesa, fecha, estado, totales) y **Ver detalle** muestra sus
+líneas y documentos relacionados. El botón *Nueva línea* del detalle precarga la llave foránea.
+**Proveedores, clientes, mesas y unidades** siguen siendo CRUD independientes. Ninguna vista muestra
+identificadores: las relaciones se resuelven a nombres reales y los IDs solo quedan en la base y en
+los `data-id` internos de los botones.
+
+**Cargues de Inventario.** *Cargue de inventario* lista todos los productos con categoría, unidades
+base/compra/venta y sus factores, stock calculado desde los movimientos, número de lotes,
+valorización, política de consumo y estado. Cada producto abre su ficha: presentaciones y precios,
+proveedores, lotes, kardex completo, recetas donde se usa, órdenes de compra y pedidos. *Kardex*
+muestra los 128 movimientos con producto legible y acceso directo a esa ficha.
+
+**Recetas con ingredientes.** *Nueva receta* abre un formulario con comboboxes de datos reales
+(producto resultante y unidad de rendimiento) y permite agregar, editar y quitar ingredientes;
+cada línea elige insumo y unidad en comboboxes y registra cantidad y merma esperada. Al guardar se
+crea/actualiza la cabecera y sus líneas de forma atómica desde el panel.
+
+**Catálogos y Tablas** reúne únicamente las tablas necesarias para la interfaz (31 tablas
+independientes) con filtro; las siete tablas de detalle solo se consultan desde su cabecera.
 
 ## Producción
 
 - Netlify (sitio y Functions): https://domus-fuego-sitio.netlify.app — panel en `/admin.html`.
 - `DATABASE_URL`, `JWT_SECRET`, `PUBLIC_SITE_URL`, `CORS_ALLOWED_ORIGINS` configuradas en Netlify.
-- Despliegue: `netlify deploy --prod`
+- Despliegue: si `netlify deploy --prod --skip-functions-cache` responde `JSONHTTPError: Forbidden`,
+  se sube un draft con `netlify deploy --skip-functions-cache` y se promueve con
+  `netlify api restoreSiteDeploy --data '{"site_id":"100c697d-00a2-4dbf-ae6d-33e47b970cb0","deploy_id":"<id>"}'`.
 - Neon: proyecto `empty-voice-61657813`, base `domus_fuego`, branch `production`.
 
 ## Decisiones y limitaciones
@@ -161,10 +178,15 @@ recepciones del detalle). El botón *Nueva línea* del detalle precarga automát
 - Producción: `/`, `/admin.html`, `/js/admin.js`, `/assets/admin.css`, `/js/app.js` y `/assets/styles.css`
   responden 200; todos los `/api/admin/*` (overview, item-unidades, data, tables, inventario,
   compras, producción, ventas, finanzas, auditoría, logs, reservas, pedidos y usuarios) responden 200
-  con token de administrador; sin token responde 401. Deploy: `6b05b63ee8f06e677cf92a5f`.
-- Menú lateral verificado en producción: 11 módulos desplegables y 92 opciones; `Compras &
-  Proveedores` abre proveedores, órdenes, detalle de órdenes, recepciones y detalle de recepciones.
-  El explorador de `orden_compra` muestra 42 filas y **Ver detalle** filtra su detalle por FK.
+  con token de administrador; sin token responde 401. Deploy: `6b05bcc806d9746d3c58f57b`.
+- Menú lateral verificado: 12 módulos desplegables y 81 opciones; `Compras & Proveedores` abre
+  proveedores, órdenes de compra y recepciones (cada una con su detalle). Se verificaron con jsdom
+  las siete cabeceras: 42 OC, 30 recepciones, 87 reservas, 82 pedidos, 40 OP, 8 costos y 128
+  movimientos; sus detalles abren líneas con nombres, unidades, cantidades y precios, sin columnas
+  `id_*`. El módulo *Cargues* muestra 8 productos y la ficha de un producto abrió 28 movimientos.
+  Catálogos muestra 31 tablas y ninguna tabla `*_detalle`.
+- Sin IDs visibles también en los resúmenes: las columnas de transacciones muestran referencias
+  legibles (reserva, venta, asiento, sesión de caja) y la tabla de usuarios muestra nombre y correo.
 - Comboboxes verificados en `/api/admin/data/item/schema`: `id_categoria`, `id_unidad_base`,
   `id_unidad_compra` e `id_unidad_venta` llegan con opciones reales; `factor_compra` y
   `factor_venta` se marcan como calculados y no se envían desde el formulario.

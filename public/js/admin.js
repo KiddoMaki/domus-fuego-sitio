@@ -9,6 +9,7 @@ const titles = {
     'inventario': 'Módulo: Catálogo e Items',
     'compras': 'Módulo: Compras & Proveedores',
     'produccion': 'Módulo: Producción & Recetas',
+    'cargues': 'Módulo: Cargues de Inventario',
     'sala': 'Módulo: Mesas & Reservas',
     'ventas': 'Módulo: Pedidos, Ventas & Caja',
     'contabilidad': 'Módulo: Finanzas & Gastos',
@@ -60,16 +61,26 @@ const TABLE_LABELS = Object.freeze({
     venta: 'Ventas',
 });
 const ALL_TABLES = Object.keys(TABLE_LABELS);
+// Las tablas de detalle NO son opciones del menú: se consultan desde la
+// cabecera (OC → líneas, reserva → productos, receta → ingredientes, etc.).
+const DETAIL_TABLES = Object.freeze([
+    'orden_compra_detalle', 'recepcion_detalle', 'pedido_detalle',
+    'reserva_detalle', 'receta_detalle', 'costo_receta_detalle',
+    'orden_produccion_detalle',
+]);
+// Catálogos y Tablas muestra únicamente las tablas necesarias para la interfaz.
+const INTERFACE_TABLES = ALL_TABLES.filter((table) => !DETAIL_TABLES.includes(table));
 
-// Tablas incluidas en el desplegable de cada módulo.
+// Tablas independientes incluidas en el desplegable de cada módulo. Las tablas
+// de detalle ya NO aparecen como opción suelta: se consultan desde la cabecera.
 const moduleTables = Object.freeze({
     inventario: ['categoria_item', 'item', 'item_presentacion', 'precio_venta',
-        'unidad_medida', 'proveedor', 'item_proveedor', 'lote_inventario', 'movimiento_inventario'],
-    compras: ['proveedor', 'orden_compra', 'orden_compra_detalle', 'recepcion', 'recepcion_detalle'],
-    produccion: ['receta', 'receta_detalle', 'costo_receta', 'costo_receta_detalle',
-        'orden_produccion', 'orden_produccion_detalle', 'merma', 'tipo_movimiento'],
-    sala: ['cliente', 'mesa', 'reserva', 'reserva_detalle'],
-    ventas: ['caja_sesion', 'pedido', 'pedido_detalle', 'venta', 'pago'],
+        'unidad_medida', 'proveedor', 'item_proveedor'],
+    compras: ['proveedor', 'orden_compra', 'recepcion'],
+    produccion: ['receta', 'orden_produccion', 'costo_receta', 'merma', 'tipo_movimiento'],
+    cargues: ['lote_inventario', 'movimiento_inventario', 'tipo_movimiento', 'unidad_medida'],
+    sala: ['cliente', 'mesa', 'reserva'],
+    ventas: ['caja_sesion', 'pedido', 'venta', 'pago'],
     contabilidad: ['categoria_gasto', 'gasto_operativo', 'tipo_movimiento_contable',
         'movimiento_contable', 'tipo_movimiento'],
     usuarios: ['usuario', 'usuarios', 'roles', 'rolesxusuario', 'cliente'],
@@ -77,10 +88,11 @@ const moduleTables = Object.freeze({
 const tablesFor = (module) => (moduleTables[module] || [])
     .map((table) => ({ label: TABLE_LABELS[table] || table, table }));
 
-// Relaciones maestro → detalle: habilitan el botón "Ver detalle" en cada fila.
+// Solo se usa en el explorador genérico de Catálogos y Tablas. En los módulos,
+// las cabeceras usan MASTER_VIEWS y muestran el detalle desde la propia fila.
 const DETAIL_MAP = Object.freeze({
+    item: { table: 'movimiento_inventario', fk: 'id_item', custom: 'product' },
     orden_compra: { table: 'orden_compra_detalle', fk: 'id_orden_compra' },
-    orden_compra_detalle: { table: 'recepcion_detalle', fk: 'id_oc_detalle' },
     recepcion: { table: 'recepcion_detalle', fk: 'id_recepcion' },
     pedido: { table: 'pedido_detalle', fk: 'id_pedido' },
     reserva: { table: 'reserva_detalle', fk: 'id_reserva' },
@@ -89,7 +101,207 @@ const DETAIL_MAP = Object.freeze({
     orden_produccion: { table: 'orden_produccion_detalle', fk: 'id_orden_produccion' },
 });
 
-// Configuración del menú: cada módulo es un desplegable con vistas + tablas.
+// Vistas cabecera-detalle: la cabecera se muestra con datos legibles (nombres,
+// fechas, totales) y cada fila abre sus líneas y documentos relacionados.
+const MASTER_VIEWS = Object.freeze({
+    reserva: {
+        title: 'Reservas', icon: 'fa-calendar-check', newTable: 'reserva',
+        note: 'Cabecera de reservas: cliente, mesa, fecha y estado. "Ver detalle" abre los productos reservados.',
+        columns: [
+            ['Cliente', (r) => labelFor('cliente', r.id_cliente)],
+            ['Mesa', (r) => labelFor('mesa', r.id_mesa)],
+            ['Fecha', (r) => fmtDate(r.fecha)],
+            ['Hora', (r) => fmtTime(r.hora)],
+            ['Comensales', (r) => num(r.cantidad_comensales)],
+            ['Estado', (r) => pill(r.estado)],
+            ['Productos', (r) => `${filtered('reserva_detalle', 'id_reserva', r.id_reserva).length} línea(s)`],
+            ['Observaciones', (r) => cellText(r.observaciones)],
+        ],
+        detail: [{ title: 'Productos reservados', table: 'reserva_detalle', fk: 'id_reserva', columns: [
+            ['Producto', (d) => labelFor('item', d.id_item)],
+            ['Cantidad', (d) => num(d.cantidad)],
+            ['Unidad', (d) => unitOfItem(d.id_item)],
+            ['Observaciones', (d) => cellText(d.observaciones)],
+        ] }],
+    },
+    orden_compra: {
+        title: 'Órdenes de compra', icon: 'fa-file-invoice', newTable: 'orden_compra',
+        note: 'Cabecera de compras: proveedor, emisión, estado y total. El detalle muestra las líneas y las recepciones de esa orden.',
+        columns: [
+            ['Proveedor', (r) => labelFor('proveedor', r.id_proveedor)],
+            ['Emisión', (r) => fmtDate(r.fecha_emision)],
+            ['Estado', (r) => pill(r.estado)],
+            ['Líneas', (r) => `${filtered('orden_compra_detalle', 'id_orden_compra', r.id_orden_compra).length} producto(s)`],
+            ['Total', (r) => money(sumLines('orden_compra_detalle', 'id_orden_compra', r.id_orden_compra,
+                (d) => Number(d.cantidad_solicitada) * Number(d.precio_pactado)))],
+            ['Recepciones', (r) => `${filtered('recepcion', 'id_orden_compra', r.id_orden_compra).length} registro(s)`],
+            ['Observaciones', (r) => cellText(r.observaciones)],
+        ],
+        detail: [
+            { title: 'Líneas de la orden', table: 'orden_compra_detalle', fk: 'id_orden_compra', columns: [
+                ['Producto', (d) => labelFor('item', d.id_item)],
+                ['Cantidad', (d) => num(d.cantidad_solicitada)],
+                ['Unidad', (d) => labelFor('unidad_medida', d.id_unidad)],
+                ['Precio pactado', (d) => money(d.precio_pactado)],
+                ['Subtotal', (d) => money(Number(d.cantidad_solicitada) * Number(d.precio_pactado))],
+                ['Recibido', (d) => num(sumLines('recepcion_detalle', 'id_oc_detalle', d.id_oc_detalle,
+                    (x) => x.cantidad_recibida))],
+            ] },
+            { title: 'Recepciones de la orden', table: 'recepcion', fk: 'id_orden_compra', columns: [
+                ['Fecha', (r) => fmtDate(r.fecha_recepcion)],
+                ['Estado', (r) => pill(r.estado)],
+                ['Líneas', (r) => `${filtered('recepcion_detalle', 'id_recepcion', r.id_recepcion).length} producto(s)`],
+                ['Observaciones', (r) => cellText(r.observaciones)],
+            ] },
+        ],
+    },
+    recepcion: {
+        title: 'Recepciones', icon: 'fa-truck-arrow-right', newTable: 'recepcion',
+        note: 'Cabecera de recepciones de almacén. El detalle muestra lo recibido por línea y el lote generado.',
+        columns: [
+            ['Orden de compra', (r) => labelFor('orden_compra', r.id_orden_compra)],
+            ['Fecha', (r) => fmtDate(r.fecha_recepcion)],
+            ['Estado', (r) => pill(r.estado)],
+            ['Productos', (r) => `${filtered('recepcion_detalle', 'id_recepcion', r.id_recepcion).length} línea(s)`],
+            ['Observaciones', (r) => cellText(r.observaciones)],
+        ],
+        detail: [{ title: 'Productos recibidos', table: 'recepcion_detalle', fk: 'id_recepcion', columns: [
+            ['Producto', (d) => labelFor('item', findRow('orden_compra_detalle', d.id_oc_detalle)?.id_item)],
+            ['Cantidad recibida', (d) => num(d.cantidad_recibida)],
+            ['Unidad', (d) => labelFor('unidad_medida', d.id_unidad)],
+            ['Costo unitario', (d) => money(d.costo_real_unitario)],
+            ['Subtotal', (d) => money(Number(d.cantidad_recibida) * Number(d.costo_real_unitario))],
+            ['Lote', (d) => cellText(findRow('lote_inventario_by_recepcion', d.id_recepcion_detalle)?.codigo_lote)],
+        ] }],
+    },
+    pedido: {
+        title: 'Pedidos', icon: 'fa-bell-concierge', newTable: 'pedido',
+        note: 'Cabecera de pedidos de salón. El detalle abre los productos pedidos y su venta/pagos.',
+        columns: [
+            ['Reserva', (r) => labelFor('reserva', r.id_reserva)],
+            ['Fecha y hora', (r) => `${fmtDate(r.fecha_hora)} ${fmtTime(r.fecha_hora)}`],
+            ['Estado', (r) => pill(r.estado)],
+            ['Productos', (r) => `${filtered('pedido_detalle', 'id_pedido', r.id_pedido).length} línea(s)`],
+            ['Total', (r) => money(sumLines('pedido_detalle', 'id_pedido', r.id_pedido,
+                (d) => Number(d.cantidad) * Number(d.precio_unitario)))],
+            ['Observaciones', (r) => cellText(r.observaciones)],
+        ],
+        detail: [
+            { title: 'Productos del pedido', table: 'pedido_detalle', fk: 'id_pedido', columns: [
+                ['Presentación', (d) => labelFor('item_presentacion', d.id_presentacion)],
+                ['Cantidad', (d) => num(d.cantidad)],
+                ['Precio unitario', (d) => money(d.precio_unitario)],
+                ['Subtotal', (d) => money(Number(d.cantidad) * Number(d.precio_unitario))],
+                ['Origen', (d) => cellText(d.origen)],
+            ] },
+            { title: 'Ventas y pagos', custom: 'orderPayments', fk: 'id_pedido' },
+        ],
+    },
+    receta: {
+        title: 'Recetas', icon: 'fa-book-open', customNew: 'recipe',
+        note: 'Cabecera de recetas. "Nueva receta" abre un formulario con comboboxes y permite agregar ingredientes (líneas).',
+        columns: [
+            ['Receta', (r) => cellText(r.nombre)],
+            ['Producto resultante', (r) => labelFor('item', r.id_item_resultante)],
+            ['Tipo', (r) => cellText(r.tipo)],
+            ['Rendimiento', (r) => num(r.rendimiento)],
+            ['Unidad', (r) => labelFor('unidad_medida', r.id_unidad_rendimiento)],
+            ['Ingredientes', (r) => `${filtered('receta_detalle', 'id_receta', r.id_receta).length} insumo(s)`],
+            ['Estado', (r) => pill(r.activa ? 'activo' : 'inactivo')],
+        ],
+        detail: [
+            { title: 'Ingredientes', table: 'receta_detalle', fk: 'id_receta', columns: [
+                ['Insumo', (d) => labelFor('item', d.id_item_insumo)],
+                ['Cantidad', (d) => num(d.cantidad)],
+                ['Unidad', (d) => labelFor('unidad_medida', d.id_unidad)],
+                ['Merma esperada', (d) => `${num(d.merma_esperada_pct)} %`],
+            ] },
+            { title: 'Costos calculados', table: 'costo_receta', fk: 'id_receta', columns: [
+                ['Fecha de cálculo', (r) => fmtDate(r.fecha_calculo)],
+                ['Rendimiento', (r) => num(r.rendimiento)],
+                ['Costo total', (r) => money(sumLines('costo_receta_detalle', 'id_costo_receta', r.id_costo_receta,
+                    (d) => Number(d.cantidad) * Number(d.costo_unitario)))],
+                ['Costo por porción', (r) => money(sumLines('costo_receta_detalle', 'id_costo_receta', r.id_costo_receta,
+                    (d) => Number(d.cantidad) * Number(d.costo_unitario)) / (Number(r.rendimiento) || 1))],
+            ] },
+            { title: 'Órdenes de producción', table: 'orden_produccion', fk: 'id_receta', columns: [
+                ['Tipo', (r) => cellText(r.tipo)],
+                ['Estado', (r) => pill(r.estado)],
+                ['Planificada', (r) => fmtDate(r.fecha_planificada)],
+                ['Ejecutada', (r) => fmtDate(r.fecha_ejecucion)],
+                ['Rendimiento real', (r) => num(r.rendimiento_real)],
+            ] },
+        ],
+    },
+    orden_produccion: {
+        title: 'Órdenes de producción', icon: 'fa-kitchen-set', newTable: 'orden_produccion',
+        note: 'Cabecera de producción. El detalle muestra insumos, lotes generados y mermas de esa orden.',
+        columns: [
+            ['Receta', (r) => labelFor('receta', r.id_receta)],
+            ['Tipo', (r) => cellText(r.tipo)],
+            ['Estado', (r) => pill(r.estado)],
+            ['Planificada', (r) => fmtDate(r.fecha_planificada)],
+            ['Ejecutada', (r) => fmtDate(r.fecha_ejecucion)],
+            ['Rendimiento real', (r) => num(r.rendimiento_real)],
+            ['Observaciones', (r) => cellText(r.observaciones)],
+        ],
+        detail: [
+            { title: 'Insumos de la orden', table: 'orden_produccion_detalle', fk: 'id_orden_produccion', columns: [
+                ['Insumo', (d) => labelFor('item', d.id_item_insumo)],
+                ['Cantidad teórica', (d) => num(d.cantidad_teorica)],
+                ['Cantidad real', (d) => num(d.cantidad_real)],
+                ['Unidad', (d) => labelFor('unidad_medida', d.id_unidad)],
+                ['Merma', (d) => num(d.merma_asociada)],
+            ] },
+            { title: 'Lotes producidos', table: 'lote_inventario', fk: 'id_orden_produccion', columns: [
+                ['Lote', (r) => cellText(r.codigo_lote)],
+                ['Producto', (r) => labelFor('item', r.id_item)],
+                ['Cantidad', (r) => num(r.cantidad_inicial)],
+                ['Unidad', (r) => labelFor('unidad_medida', r.id_unidad)],
+                ['Vencimiento', (r) => fmtDate(r.fecha_vencimiento)],
+                ['Estado', (r) => pill(r.estado)],
+            ] },
+            { title: 'Mermas de los insumos', custom: 'productionWaste', fk: 'id_orden_produccion' },
+        ],
+    },
+    costo_receta: {
+        title: 'Costos de recetas', icon: 'fa-coins', newTable: 'costo_receta',
+        note: 'Cálculo de costos por receta. El detalle muestra el costo de cada insumo.',
+        columns: [
+            ['Receta', (r) => labelFor('receta', r.id_receta)],
+            ['Fecha de cálculo', (r) => fmtDate(r.fecha_calculo)],
+            ['Rendimiento', (r) => num(r.rendimiento)],
+            ['Costo total', (r) => money(sumLines('costo_receta_detalle', 'id_costo_receta', r.id_costo_receta,
+                (d) => Number(d.cantidad) * Number(d.costo_unitario)))],
+        ],
+        detail: [{ title: 'Costo de insumos', table: 'costo_receta_detalle', fk: 'id_costo_receta', columns: [
+            ['Insumo', (d) => labelFor('item', d.id_item_insumo)],
+            ['Cantidad', (d) => num(d.cantidad)],
+            ['Unidad', (d) => labelFor('unidad_medida', d.id_unidad)],
+            ['Costo unitario', (d) => money(d.costo_unitario)],
+            ['Subtotal', (d) => money(Number(d.cantidad) * Number(d.costo_unitario))],
+        ] }],
+    },
+    movimiento_inventario: {
+        title: 'Movimientos de inventario', icon: 'fa-arrow-right-arrow-left',
+        newTable: 'movimiento_inventario',
+        note: 'Kardex real de la base. "Ver detalle" abre toda la ficha del producto: presentaciones, precios, proveedores, lotes y movimientos.',
+        columns: [
+            ['Producto', (r) => labelFor('item', r.id_item)],
+            ['Fecha', (r) => `${fmtDate(r.fecha_movimiento)} ${fmtTime(r.fecha_movimiento)}`],
+            ['Tipo', (r) => labelFor('tipo_movimiento', r.id_tipo_movimiento)],
+            ['Cantidad', (r) => `${signedQty(r)} ${unitOfItem(r.id_item)}`],
+            ['Lote', (r) => cellText(findRow('lote_inventario', r.id_lote)?.codigo_lote)],
+            ['Usuario', (r) => labelFor('usuario', r.id_usuario)],
+            ['Observaciones', (r) => cellText(r.observaciones)],
+        ],
+        detail: [{ title: 'Ficha del producto', custom: 'product', fk: 'id_item', columns: [] }],
+    },
+});
+
+// Configuración del menú: cada módulo es un desplegable con vistas, cabeceras
+// maestro-detalle y tablas independientes. Las tablas de detalle se consultan
+// desde la cabecera correspondiente, no como opciones aisladas.
 const NAV_GROUPS = [
     {
         id: 'navModulesHeading', heading: 'Módulos Administrativos', modules: [
@@ -103,19 +315,34 @@ const NAV_GROUPS = [
             ] },
             { key: 'compras', label: 'Compras & Proveedores', icon: 'fa-truck-ramp-box', children: [
                 { label: 'Resumen de compras', view: 'compras' },
-                ...tablesFor('compras'),
+                { label: 'Proveedores (CRUD independiente)', table: 'proveedor' },
+                { label: 'Órdenes de compra y su detalle', master: 'orden_compra' },
+                { label: 'Recepciones y su detalle', master: 'recepcion' },
             ] },
             { key: 'produccion', label: 'Producción & Recetas', icon: 'fa-kitchen-set', children: [
                 { label: 'Resumen de producción', view: 'produccion' },
-                ...tablesFor('produccion'),
+                { label: 'Recetas con ingredientes', master: 'receta' },
+                { label: 'Órdenes de producción y su detalle', master: 'orden_produccion' },
+                { label: 'Costos de recetas', master: 'costo_receta' },
+                ...tablesFor('produccion').filter((t) => !['receta', 'orden_produccion', 'costo_receta'].includes(t.table)),
+            ] },
+            { key: 'cargues', label: 'Cargues de Inventario', icon: 'fa-warehouse', children: [
+                { label: 'Cargue de inventario (productos y stock)', view: 'inventoryLoad' },
+                { label: 'Kardex: movimientos por producto', view: 'inventoryMovements' },
+                { label: 'Lotes de inventario', table: 'lote_inventario' },
+                { label: 'Tipos de movimiento', table: 'tipo_movimiento' },
+                { label: 'Unidades de medida', table: 'unidad_medida' },
             ] },
             { key: 'sala', label: 'Mesas & Reservas', icon: 'fa-chair', children: [
                 { label: 'Resumen de reservas y mesas', view: 'sala' },
-                ...tablesFor('sala'),
+                { label: 'Clientes (CRUD independiente)', table: 'cliente' },
+                { label: 'Mesas (CRUD independiente)', table: 'mesa' },
+                { label: 'Reservas y su detalle', master: 'reserva' },
             ] },
             { key: 'ventas', label: 'Pedidos, Ventas & Caja', icon: 'fa-cash-register', children: [
                 { label: 'Resumen de ventas', view: 'ventas' },
-                ...tablesFor('ventas'),
+                { label: 'Pedidos y su detalle', master: 'pedido' },
+                ...tablesFor('ventas').filter((t) => t.table !== 'pedido'),
             ] },
             { key: 'contabilidad', label: 'Finanzas & Gastos', icon: 'fa-scale-balanced', children: [
                 { label: 'Resumen financiero', view: 'contabilidad' },
@@ -129,8 +356,8 @@ const NAV_GROUPS = [
                 ...tablesFor('usuarios'),
             ] },
             { key: 'catalogos', label: 'Catálogos y Tablas', icon: 'fa-database', children: [
-                { label: 'Vista general de todas las tablas', view: 'catalogos' },
-                ...ALL_TABLES.map((table) => ({ label: TABLE_LABELS[table], table })),
+                { label: 'Vista general de las tablas de la interfaz', view: 'catalogos' },
+                ...INTERFACE_TABLES.map((table) => ({ label: TABLE_LABELS[table], table })),
             ] },
         ],
     },
@@ -191,10 +418,13 @@ function renderSidebar() {
                         ${mod.children.map((child) => {
                             const key = child.table
                                 ? `table:${mod.key}:${child.table}`
-                                : `view:${child.view || mod.key}`;
+                                : child.master
+                                    ? `master:${mod.key}:${child.master}`
+                                    : `view:${child.view || mod.key}`;
                             VIEW_REGISTRY[key] = { ...child, module: mod.key, key };
+                            const icon = child.master ? 'fa-list-check' : child.table ? 'fa-table' : 'fa-angle-right';
                             return `<li><button type="button" class="nav-sublink" data-view-key="${esc(key)}">
-                                <i class="fa-solid ${child.table ? 'fa-table' : 'fa-angle-right'}" aria-hidden="true"></i>
+                                <i class="fa-solid ${icon}" aria-hidden="true"></i>
                                 <span>${esc(child.label)}</span></button></li>`;
                         }).join('')}
                     </ul>
@@ -235,7 +465,9 @@ function openView(key, options = {}) {
     if (breadcrumb) {
         breadcrumb.textContent = item.table
             ? `${titles[item.module] || ''} · ${TABLE_LABELS[item.table] || item.table}`
-            : (item.label.startsWith('Indicadores') ? titles[item.view] : item.label);
+            : item.master
+                ? `${titles[item.module] || ''} · ${MASTER_VIEWS[item.master].title}`
+                : (item.label.startsWith('Indicadores') ? titles[item.view] : item.label);
     }
 
     if (!options.keepDetail) {
@@ -246,8 +478,14 @@ function openView(key, options = {}) {
 
     if (item.table) {
         renderTableExplorer(item.table);
+    } else if (item.master) {
+        renderMasterView(item.master);
     } else if (item.view === 'itemUnits') {
         renderUnitsExplorer();
+    } else if (item.view === 'inventoryLoad') {
+        renderInventoryLoad();
+    } else if (item.view === 'inventoryMovements') {
+        renderMasterView('movimiento_inventario');
     } else {
         activateSection(item.view);
         loadModule(item.view);
@@ -298,8 +536,6 @@ const fmt = (value) => {
     });
 };
 
-const money = (value) => `$${Number(value ?? 0).toFixed(2)}`;
-
 function pill(state) {
     const value = String(state ?? '').toLowerCase();
     const active = ['confirmada', 'activo', 'abierto', 'abierta', 'pagado', 'pagada',
@@ -341,6 +577,106 @@ const cellText = (value) => {
     return String(value).slice(0, 90);
 };
 
+// ---------- Traducción de llaves a datos legibles ----------
+const FK_REF = Object.freeze({
+    id_categoria: 'categoria_item', id_categoria_gasto: 'categoria_gasto',
+    id_unidad: 'unidad_medida', id_unidad_base: 'unidad_medida',
+    id_unidad_compra: 'unidad_medida', id_unidad_venta: 'unidad_medida',
+    id_unidad_rendimiento: 'unidad_medida',
+    id_item: 'item', id_item_insumo: 'item', id_item_resultante: 'item',
+    id_presentacion: 'item_presentacion', id_proveedor: 'proveedor',
+    id_item_proveedor: 'item_proveedor', id_cliente: 'cliente', id_mesa: 'mesa',
+    id_usuario: 'usuario', id_usuario_responsable: 'usuario', id_rol: 'roles',
+    id_orden_compra: 'orden_compra', id_oc_detalle: 'orden_compra_detalle',
+    id_recepcion: 'recepcion', id_recepcion_detalle: 'recepcion_detalle',
+    id_pedido: 'pedido', id_pedido_detalle: 'pedido_detalle', id_reserva: 'reserva',
+    id_receta: 'receta', id_costo_receta: 'costo_receta',
+    id_orden_produccion: 'orden_produccion', id_op_detalle: 'orden_produccion_detalle',
+    id_lote: 'lote_inventario', id_tipo_movimiento: 'tipo_movimiento',
+    id_tipo_movimiento_contable: 'tipo_movimiento_contable',
+    id_caja_sesion: 'caja_sesion', id_venta: 'venta', id_gasto: 'gasto_operativo',
+    id_movimiento: 'movimiento_inventario',
+});
+const LABEL_COLS = ['nombre', 'descripcion', 'concepto', 'codigo_lote', 'numero',
+    'email', 'simbolo', 'detalle', 'motivo', 'tipo', 'contacto', 'telefono',
+    'observaciones', 'medio'];
+const LABEL_RULES = {
+    item_presentacion: (r) => `${labelFor('item', r.id_item)} · ${cellText(r.nombre)}`,
+    unidad_medida: (r) => cellText(r.simbolo || r.nombre),
+    orden_compra: (r) => `${labelFor('proveedor', r.id_proveedor)} · ${fmtDate(r.fecha_emision)}`,
+    recepcion: (r) => `Recepción ${fmtDate(r.fecha_recepcion)}`,
+    pedido: (r) => `Pedido ${fmtDate(r.fecha_hora)} ${fmtTime(r.fecha_hora)}`,
+    reserva: (r) => `${labelFor('cliente', r.id_cliente)} · ${fmtDate(r.fecha)}`,
+    caja_sesion: (r) => `Caja ${fmtDate(r.fecha_apertura)}`,
+    venta: (r) => `Venta ${fmtDate(r.fecha_venta)}`,
+    movimiento_inventario: (r) => `${labelFor('item', r.id_item)} · ${fmtDate(r.fecha_movimiento)}`,
+    receta: (r) => cellText(r.nombre),
+};
+
+const pkOf = (table) => rowsOf('tables').find((t) => t.table === table)?.pk || `id_${table}`;
+const humanize = (name) => name.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+const num = (value) => value === null || value === undefined || value === ''
+    ? '—' : Number(value).toLocaleString('es-EC', { maximumFractionDigits: 3 });
+const fmtDate = (value) => value ? String(value).slice(0, 10) : '—';
+const fmtTime = (value) => {
+    if (!value) return '—';
+    const text = String(value);
+    // La API entrega "2026-10-25 13:00:00" (y a veces ISO con T).
+    const match = text.match(/(?:T|\s)(\d{2}:\d{2})/);
+    return match ? match[1] : text.slice(0, 5);
+};
+const money = (value) => `$${Number(value ?? 0).toFixed(2)}`;
+
+function findRow(table, id) {
+    if (table === 'lote_inventario_by_recepcion') {
+        return rowsOf('cat:lote_inventario').find((r) => String(r.id_recepcion_detalle) === String(id)) || null;
+    }
+    if (!table) return null;
+    const pk = pkOf(table);
+    return rowsOf(`cat:${table}`).find((r) => String(r[pk]) === String(id)) || null;
+}
+
+function filtered(table, field, value) {
+    return rowsOf(`cat:${table}`).filter((r) => String(r[field]) === String(value));
+}
+
+function sumLines(table, field, value, pick) {
+    return filtered(table, field, value).reduce((sum, row) => sum + Number(pick ? pick(row) : row[field] ?? 0), 0);
+}
+
+function labelFor(table, value) {
+    if (value === null || value === undefined || value === '') return '—';
+    const row = findRow(table, value);
+    if (!row) return cellText(value);
+    if (LABEL_RULES[table]) return LABEL_RULES[table](row);
+    const column = LABEL_COLS.find((name) => row[name] !== null && row[name] !== undefined && row[name] !== '');
+    return column ? cellText(row[column]) : `${TABLE_LABELS[table] || humanize(table)}`;
+}
+
+function unitOfItem(itemId) {
+    const itemRow = findRow('item', itemId);
+    return labelFor('unidad_medida', itemRow?.id_unidad_base);
+}
+
+function signedQty(movement) {
+    const type = findRow('tipo_movimiento', movement.id_tipo_movimiento);
+    return Number(movement.cantidad ?? 0) * (Number(type?.signo ?? 1) || 1);
+}
+
+function stockOfItem(itemId) {
+    return filtered('movimiento_inventario', 'id_item', itemId).reduce((sum, m) => sum + signedQty(m), 0);
+}
+
+function detailRowsHtml(columns, rows) {
+    if (!columns.length) return '';
+    return `<div class="table-responsive"><table class="admin-table">
+        <thead><tr>${columns.map(([label]) => `<th scope="col">${esc(label)}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map((row) => `<tr>${columns.map(([, render]) =>
+            `<td>${render(row)}</td>`).join('')}</tr>`).join('')
+            || `<tr><td class="table-empty" colspan="${columns.length}">Sin líneas registradas.</td></tr>`}
+        </tbody></table></div>`;
+}
+
 // ---------- Catálogos / CRUDs independientes por módulo ----------
 function catalogPkOf(table, rows) {
     const known = rowsOf('tables').find((item) => item.table === table);
@@ -358,27 +694,13 @@ function renderCatalogCard(container, table) {
         container.appendChild(card);
     }
     const pk = catalogPkOf(table, rows);
-    const columns = rows.length
-        ? Object.keys(rows[0]).filter((name) => name !== 'password_hash').slice(0, 7)
-        : [pk];
     card.innerHTML = `<div class="card-header-bar">
-            <h2><i class="fa-solid fa-table" aria-hidden="true"></i> ${esc(table)}
+            <h2><i class="fa-solid fa-table" aria-hidden="true"></i> ${esc(TABLE_LABELS[table] || table)}
                 <span class="catalog-count">${rows.length} registro(s)</span></h2>
             <button type="button" class="btn-gold" data-new-table="${esc(table)}">
                 <i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo
             </button>
-        </div>
-        <div class="table-responsive"><table class="admin-table">
-            <thead><tr>${columns.map((name) => `<th scope="col">${esc(name)}</th>`).join('')}
-                <th scope="col">Acciones</th></tr></thead>
-            <tbody>${rows.map((row) => `<tr>
-                ${columns.map((name) => `<td>${esc(cellText(row[name]))}</td>`).join('')}
-                <td class="table-actions">
-                    <button type="button" data-edit="${esc(table)}" data-id="${esc(row[pk])}">Editar</button>
-                    <button type="button" data-delete="${esc(table)}" data-id="${esc(row[pk])}">Eliminar</button>
-                </td></tr>`).join('') || `<tr><td class="table-empty" colspan="${columns.length + 1}">Sin registros en ${esc(table)}.</td></tr>`}
-            </tbody>
-        </table></div>`;
+        </div>${tableRowsHtml(table, rows, pk)}`;
 }
 
 function renderAllCatalogs() {
@@ -389,10 +711,7 @@ function renderAllCatalogs() {
         zone.id = 'catalog-zone-catalogos';
         section?.appendChild(zone);
     }
-    const tables = rowsOf('tables')
-        .map((item) => item.table)
-        .filter((table) => table !== 'auditoria_log');
-    tables.forEach((table) => renderCatalogCard(zone, table));
+    INTERFACE_TABLES.forEach((table) => renderCatalogCard(zone, table));
     wireTableActions('catalogos', refreshActive);
     const filter = document.getElementById('catalogFilter');
     if (filter && !filter.dataset.wired) {
@@ -445,22 +764,29 @@ function renderItemUnitsCard() {
     if (body) body.innerHTML = unitsRowsHtml();
 }
 
-// ---------- Explorador genérico: una tabla o vista por opción del menú ----------
+// ---------- Explorador genérico: una tabla por opción del menú ----------
+// Las llaves foráneas se traducen a nombres reales: el panel nunca muestra
+// identificadores crudos, esos quedan en la base de datos y en los comboboxes.
 function tableRowsHtml(table, rows, pk) {
     const keys = [...new Set(rows.flatMap((row) => Object.keys(row)))].filter((k) => k !== 'password_hash');
-    const columns = keys.length ? keys : [pk];
+    const columns = keys.filter((key) => !/^id_/.test(key));
+    const shown = columns.length ? columns : ['__label__'];
     const detail = DETAIL_MAP[table];
+    const label = (row, column) => column === '__label__'
+        ? esc(Object.keys(row).filter((key) => /^id_/.test(key))
+            .map((key) => labelFor(FK_REF[key], row[key])).join(' · '))
+        : esc(cellText(row[column]));
     return `<div class="table-responsive"><table class="admin-table">
-        <thead><tr>${columns.map((c) => `<th scope="col">${esc(c)}</th>`).join('')}
+        <thead><tr>${shown.map((c) => `<th scope="col">${c === '__label__' ? 'Registro' : esc(humanize(c))}</th>`).join('')}
             <th scope="col">Acciones</th></tr></thead>
         <tbody>${rows.map((row) => `<tr>
-            ${columns.map((c) => `<td>${esc(cellText(row[c]))}</td>`).join('')}
+            ${shown.map((c) => `<td>${label(row, c)}</td>`).join('')}
             <td class="table-actions">
                 <button type="button" data-edit="${esc(table)}" data-id="${esc(row[pk])}">Editar</button>
                 ${detail ? `<button type="button" data-detail="${esc(table)}" data-detail-id="${esc(row[pk])}"
                     data-detail-fk="${esc(detail.fk)}"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Ver detalle</button>` : ''}
                 <button type="button" class="danger" data-delete="${esc(table)}" data-id="${esc(row[pk])}">Eliminar</button>
-            </td></tr>`).join('') || `<tr><td class="table-empty" colspan="${columns.length + 1}">Sin registros en ${esc(TABLE_LABELS[table] || table)}.</td></tr>`}
+            </td></tr>`).join('') || `<tr><td class="table-empty" colspan="${shown.length + 1}">Sin registros en ${esc(TABLE_LABELS[table] || table)}.</td></tr>`}
         </tbody></table></div>`;
 }
 
@@ -504,31 +830,305 @@ function renderUnitsExplorer() {
     activateSection('tableExplorer');
 }
 
-function showDetail(masterTable, fk, id) {
-    const detail = DETAIL_MAP[masterTable];
-    const host = document.getElementById('tableExplorerDetail');
-    if (!detail || !host) return;
-    currentDetail = { masterTable, fk, id };
-    const rows = rowsOf(`cat:${detail.table}`).filter((row) => String(row[fk]) === String(id));
-    const pk = catalogPkOf(detail.table, rows);
-    host.innerHTML = `<div class="table-card catalog-card" style="margin-top:18px">
-        <div class="card-header-bar">
-            <h2><i class="fa-solid fa-list-check" aria-hidden="true"></i> ${esc(TABLE_LABELS[detail.table] || detail.table)}
-                <span class="catalog-count">${esc(TABLE_LABELS[masterTable] || masterTable)} #${esc(id)} · ${rows.length} fila(s)</span></h2>
-            <div class="explorer-actions">
-                <button type="button" class="btn-gold" data-new-table="${esc(detail.table)}"
-                        data-prefill-fk="${esc(fk)}" data-prefill-id="${esc(id)}">
-                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Nueva línea
-                </button>
-                <button type="button" class="btn-red" id="detailClose">Cerrar detalle</button>
-            </div>
-        </div>
-        ${tableRowsHtml(detail.table, rows, pk)}
+// ---------- Cabecera → detalle con datos legibles ----------
+function renderMasterView(table) {
+    const view = MASTER_VIEWS[table];
+    if (!view) return renderTableExplorer(table);
+    const rows = rowsOf(`cat:${table}`);
+    const pk = pkOf(table);
+    setExplorerHeader(
+        `<i class="fa-solid ${esc(view.icon)}" aria-hidden="true"></i> ${esc(view.title)}
+         <span class="catalog-count">${rows.length} registro(s)</span>`,
+        view.note,
+        view.customNew ? null : (view.newTable || table)
+    );
+    const newButton = document.getElementById('tableExplorerNew');
+    if (view.customNew === 'recipe' && newButton) {
+        newButton.hidden = false;
+        newButton.dataset.recipeNew = 'true';
+        delete newButton.dataset.newTable;
+        newButton.innerHTML = '<i class="fa-solid fa-plus" aria-hidden="true"></i> Nueva receta';
+    }
+    const host = document.getElementById('tableExplorerTable');
+    if (host) {
+        host.innerHTML = `<div class="table-responsive"><table class="admin-table">
+            <thead><tr>${view.columns.map(([label]) => `<th scope="col">${esc(label)}</th>`).join('')}
+                <th scope="col">Acciones</th></tr></thead>
+            <tbody>${rows.map((row) => `<tr>
+                ${view.columns.map(([, render]) => `<td>${render(row)}</td>`).join('')}
+                <td class="table-actions">
+                    <button type="button" data-edit="${esc(table)}" data-id="${esc(row[pk])}">Editar</button>
+                    ${table === 'movimiento_inventario'
+                        ? `<button type="button" data-product-detail="${esc(row.id_item)}">Ver ficha del producto</button>`
+                        : `<button type="button" data-detail="${esc(table)}" data-detail-id="${esc(row[pk])}">
+                            <i class="fa-solid fa-list-check" aria-hidden="true"></i> Ver detalle</button>`}
+                    ${view.customNew === 'recipe'
+                        ? `<button type="button" data-recipe-edit="${esc(row[pk])}">Gestionar ingredientes</button>` : ''}
+                    <button type="button" class="danger" data-delete="${esc(table)}" data-id="${esc(row[pk])}">Eliminar</button>
+                </td></tr>`).join('') || `<tr><td class="table-empty" colspan="${view.columns.length + 1}">Sin registros en ${esc(view.title)}.</td></tr>`}
+            </tbody></table></div>`;
+    }
+    wireTableActions('tableExplorer', refreshActive);
+    activateSection('tableExplorer');
+}
+
+function detailToolbar(title, subtitle) {
+    return `<div class="detail-toolbar">
+        <div><strong>${title}</strong>${subtitle ? `<span class="catalog-count">${subtitle}</span>` : ''}</div>
+        <button type="button" class="btn-red" id="detailClose">Cerrar detalle</button>
     </div>`;
+}
+
+function movementDocument(row) {
+    if (row.id_recepcion_detalle) {
+        const line = findRow('recepcion_detalle', row.id_recepcion_detalle);
+        return labelFor('recepcion', line?.id_recepcion);
+    }
+    if (row.id_pedido_detalle) {
+        const line = findRow('pedido_detalle', row.id_pedido_detalle);
+        return labelFor('pedido', line?.id_pedido);
+    }
+    if (row.id_op_detalle) {
+        const line = findRow('orden_produccion_detalle', row.id_op_detalle);
+        return labelFor('orden_produccion', line?.id_orden_produccion);
+    }
+    return labelFor('orden_produccion', row.id_orden_produccion);
+}
+
+function showDetail(masterTable, fk, id) {
+    if (!MASTER_VIEWS[masterTable]) {
+        if (DETAIL_MAP[masterTable]?.custom === 'product') showProductDetail(id);
+        return;
+    }
+    showMasterDetail(masterTable, id);
+}
+
+function showMasterDetail(table, id) {
+    const view = MASTER_VIEWS[table];
+    const host = document.getElementById('tableExplorerDetail');
+    if (!view || !host) return;
+    currentDetail = { type: 'master', table, id };
+    const rows = rowsOf(`cat:${table}`);
+    const pk = pkOf(table);
+    const master = rows.find((row) => String(row[pk]) === String(id)) || {};
+    let html = detailToolbar(`Detalle de ${esc(view.title)}`, cellText(master.nombre || master.observaciones || view.title));
+    (view.detail || []).forEach((section) => {
+        let inner = '';
+        let count = 0;
+        let newButton = '';
+        if (section.custom === 'product') {
+            inner = productDetailHtml(id);
+        } else if (section.custom === 'orderPayments') {
+            const sales = filtered('venta', 'id_pedido', id);
+            const payments = rowsOf('cat:pago').filter((p) => sales.some((v) => String(v.id_venta) === String(p.id_venta)));
+            count = payments.length;
+            inner = detailRowsHtml([
+                ['Venta', (p) => labelFor('venta', p.id_venta)],
+                ['Medio de pago', (p) => cellText(p.medio)],
+                ['Monto', (p) => money(p.monto)],
+                ['Estado', (p) => pill(p.estado)],
+                ['Fecha', (p) => fmtDate(p.fecha_pago)],
+            ], payments);
+        } else if (section.custom === 'productionWaste') {
+            // Las mermas se registran como movimientos de salida; se muestran
+            // las que corresponden a los insumos de esta orden de producción.
+            const insumoIds = filtered('orden_produccion_detalle', 'id_orden_produccion', id)
+                .map((line) => String(line.id_item_insumo));
+            const wastes = rowsOf('cat:merma').filter((m) => {
+                const movement = findRow('movimiento_inventario', m.id_movimiento);
+                return movement && insumoIds.includes(String(movement.id_item));
+            });
+            count = wastes.length;
+            inner = detailRowsHtml([
+                ['Producto', (w) => labelFor('item', findRow('movimiento_inventario', w.id_movimiento)?.id_item)],
+                ['Fecha', (w) => fmtDate(findRow('movimiento_inventario', w.id_movimiento)?.fecha_movimiento)],
+                ['Cantidad', (w) => num(findRow('movimiento_inventario', w.id_movimiento)?.cantidad)],
+                ['Motivo', (w) => cellText(w.motivo)],
+                ['Descripción', (w) => cellText(w.descripcion)],
+                ['Responsable', (w) => labelFor('usuario', w.id_usuario_responsable)],
+            ], wastes);
+        } else {
+            const sectionRows = filtered(section.table, section.fk, id);
+            count = sectionRows.length;
+            inner = detailRowsHtml(section.columns, sectionRows);
+            const pkSection = pkOf(section.table);
+            newButton = section.table === 'receta_detalle'
+                ? `<button type="button" class="btn-gold" data-recipe-edit="${esc(id)}">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Agregar ingredientes</button>`
+                : `<button type="button" class="btn-gold" data-new-table="${esc(section.table)}"
+                        data-prefill-fk="${esc(section.fk)}" data-prefill-id="${esc(id)}">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Nueva línea</button>`;
+        }
+        html += `<div class="table-card catalog-card detail-card">
+            <div class="card-header-bar">
+                <h2><i class="fa-solid fa-list-check" aria-hidden="true"></i> ${esc(section.title)}
+                    <span class="catalog-count">${count} fila(s)</span></h2>
+                ${newButton ? `<div class="explorer-actions">${newButton}</div>` : ''}
+            </div>${inner}</div>`;
+    });
+    host.innerHTML = html;
     host.querySelector('#detailClose')?.addEventListener('click', () => {
         host.innerHTML = '';
         currentDetail = null;
     });
+}
+
+function showProductDetail(id) {
+    const host = document.getElementById('tableExplorerDetail');
+    if (!host) return;
+    currentDetail = { type: 'product', id };
+    host.innerHTML = detailToolbar('Ficha del producto', labelFor('item', id)) + productDetailHtml(id);
+    host.querySelector('#detailClose')?.addEventListener('click', () => {
+        host.innerHTML = '';
+        currentDetail = null;
+    });
+}
+
+function factsHtml(pairs) {
+    return `<dl class="detail-facts">${pairs.map(([label, value]) =>
+        `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`).join('')}</dl>`;
+}
+
+function productDetailHtml(id) {
+    const item = findRow('item', id) || {};
+    const presentations = filtered('item_presentacion', 'id_item', id);
+    const suppliers = filtered('item_proveedor', 'id_item', id);
+    const lots = filtered('lote_inventario', 'id_item', id);
+    const movements = filtered('movimiento_inventario', 'id_item', id)
+        .sort((a, b) => String(b.fecha_movimiento).localeCompare(String(a.fecha_movimiento)));
+    const recipeUses = rowsOf('cat:receta_detalle').filter((r) => String(r.id_item_insumo) === String(id))
+        .map((r) => ({ receta: labelFor('receta', r.id_receta), uso: 'Insumo', cantidad: r.cantidad, unidad: r.id_unidad }))
+        .concat(filtered('receta', 'id_item_resultante', id).map((r) => ({
+            receta: labelFor('receta', r.id_receta), uso: 'Producto terminado',
+            cantidad: r.rendimiento, unidad: r.id_unidad_rendimiento,
+        })));
+    const purchases = filtered('orden_compra_detalle', 'id_item', id);
+    const presentationIds = presentations.map((p) => String(p.id_presentacion));
+    const orderLines = rowsOf('cat:pedido_detalle')
+        .filter((d) => presentationIds.includes(String(d.id_presentacion)));
+    const value = lots.reduce((sum, l) => sum + Number(l.cantidad_inicial ?? 0) * Number(l.costo_unitario ?? 0), 0);
+    const sections = [
+        { title: 'Datos del producto', html: factsHtml([
+            ['Producto', esc(cellText(item.nombre))],
+            ['Categoría', labelFor('categoria_item', item.id_categoria)],
+            ['Tipo', esc(cellText(item.tipo_item))],
+            ['Unidad base', labelFor('unidad_medida', item.id_unidad_base)],
+            ['Unidad de compra', `${labelFor('unidad_medida', item.id_unidad_compra)} (factor ${num(item.factor_compra)})`],
+            ['Unidad de venta', `${labelFor('unidad_medida', item.id_unidad_venta)} (factor ${num(item.factor_venta)})`],
+            ['Stock por movimientos', `${num(stockOfItem(id))} ${unitOfItem(id)}`],
+            ['Stock mínimo', num(item.stock_minimo)],
+            ['Política de consumo', esc(cellText(item.politica_consumo))],
+            ['Maneja lote', item.maneja_lote ? 'Sí' : 'No'],
+            ['Perecedero', item.perecedero ? `Sí (${num(item.vida_util_dias)} días)` : 'No'],
+            ['Valorización de lotes', money(value)],
+            ['Estado', pill(item.activo ? 'activo' : 'inactivo')],
+            ['Descripción', esc(cellText(item.descripcion))],
+        ]), newButton: `<button type="button" class="btn-gold" data-edit="item" data-id="${esc(id)}">Editar producto</button>` },
+        { title: 'Presentaciones y precios', rows: presentations, columns: [
+            ['Presentación', (p) => esc(cellText(p.nombre))],
+            ['Unidad', (p) => labelFor('unidad_medida', p.id_unidad)],
+            ['Factor', (p) => num(p.factor_unidad)],
+            ['Uso', (p) => [p.es_venta ? 'Venta' : '', p.es_compra ? 'Compra' : ''].filter(Boolean).join(' / ') || '—'],
+            ['Precio vigente', (p) => {
+                const prices = filtered('precio_venta', 'id_presentacion', p.id_presentacion)
+                    .sort((a, b) => String(b.vigente_desde).localeCompare(String(a.vigente_desde)));
+                return money(prices[0]?.precio ?? 0);
+            }],
+        ], newTable: 'item_presentacion', newFk: 'id_item', newId: id },
+        { title: 'Proveedores del producto', rows: suppliers, columns: [
+            ['Proveedor', (s) => labelFor('proveedor', s.id_proveedor)],
+            ['Código', (s) => esc(cellText(s.codigo_proveedor))],
+            ['Precio de referencia', (s) => money(s.precio_referencia)],
+        ], newTable: 'item_proveedor', newFk: 'id_item', newId: id },
+        { title: 'Lotes de inventario', rows: lots, columns: [
+            ['Lote', (l) => esc(cellText(l.codigo_lote))],
+            ['Cantidad', (l) => num(l.cantidad_inicial)],
+            ['Unidad', (l) => labelFor('unidad_medida', l.id_unidad)],
+            ['Costo unitario', (l) => money(l.costo_unitario)],
+            ['Ingreso', (l) => fmtDate(l.fecha_ingreso)],
+            ['Vencimiento', (l) => fmtDate(l.fecha_vencimiento)],
+            ['Estado', (l) => pill(l.estado)],
+            ['Origen', (l) => l.id_recepcion_detalle ? 'Compra' : l.id_orden_produccion ? 'Producción' : '—'],
+        ], newTable: 'lote_inventario', newFk: 'id_item', newId: id },
+        { title: 'Movimientos (kardex)', rows: movements, columns: [
+            ['Fecha', (m) => `${fmtDate(m.fecha_movimiento)} ${fmtTime(m.fecha_movimiento)}`],
+            ['Tipo', (m) => labelFor('tipo_movimiento', m.id_tipo_movimiento)],
+            ['Cantidad', (m) => `${num(signedQty(m))} ${labelFor('unidad_medida', m.id_unidad)}`],
+            ['Lote', (m) => esc(cellText(findRow('lote_inventario', m.id_lote)?.codigo_lote))],
+            ['Documento', (m) => esc(cellText(movementDocument(m)))],
+            ['Usuario', (m) => labelFor('usuario', m.id_usuario)],
+            ['Observaciones', (m) => esc(cellText(m.observaciones))],
+        ], newTable: 'movimiento_inventario', newFk: 'id_item', newId: id },
+        { title: 'Recetas donde se usa', rows: recipeUses, columns: [
+            ['Receta', (r) => esc(cellText(r.receta))],
+            ['Uso', (r) => esc(cellText(r.uso))],
+            ['Cantidad / rendimiento', (r) => num(r.cantidad)],
+            ['Unidad', (r) => labelFor('unidad_medida', r.unidad)],
+        ] },
+        { title: 'Órdenes de compra del producto', rows: purchases, columns: [
+            ['Orden de compra', (d) => labelFor('orden_compra', d.id_orden_compra)],
+            ['Cantidad', (d) => num(d.cantidad_solicitada)],
+            ['Unidad', (d) => labelFor('unidad_medida', d.id_unidad)],
+            ['Precio pactado', (d) => money(d.precio_pactado)],
+            ['Recibido', (d) => num(sumLines('recepcion_detalle', 'id_oc_detalle', d.id_oc_detalle, (x) => x.cantidad_recibida))],
+        ], newTable: 'orden_compra_detalle', newFk: 'id_item', newId: id },
+        { title: 'Pedidos del producto', rows: orderLines, columns: [
+            ['Pedido', (d) => labelFor('pedido', d.id_pedido)],
+            ['Presentación', (d) => labelFor('item_presentacion', d.id_presentacion)],
+            ['Cantidad', (d) => num(d.cantidad)],
+            ['Precio unitario', (d) => money(d.precio_unitario)],
+            ['Origen', (d) => esc(cellText(d.origen))],
+        ] },
+    ];
+    return sections.map((section) => `<div class="table-card catalog-card detail-card">
+        <div class="card-header-bar">
+            <h2><i class="fa-solid fa-circle-info" aria-hidden="true"></i> ${esc(section.title)}
+                ${section.rows ? `<span class="catalog-count">${section.rows.length} fila(s)</span>` : ''}</h2>
+            ${section.newButton || (section.newTable
+                ? `<button type="button" class="btn-gold" data-new-table="${esc(section.newTable)}"
+                        data-prefill-fk="${esc(section.newFk)}" data-prefill-id="${esc(section.newId)}">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo registro</button>` : '')}
+        </div>${section.html || detailRowsHtml(section.columns, section.rows)}</div>`).join('');
+}
+
+function renderInventoryLoad() {
+    const items = rowsOf('cat:item');
+    setExplorerHeader(
+        `<i class="fa-solid fa-warehouse" aria-hidden="true"></i> Cargue de inventario
+         <span class="catalog-count">${items.length} producto(s)</span>`,
+        'Inventario de todo lo registrado: existencias calculadas desde los movimientos, lotes, unidades de compra/venta y valorización. Cada producto abre su ficha completa.',
+        'item'
+    );
+    const host = document.getElementById('tableExplorerTable');
+    if (host) {
+        host.innerHTML = `<div class="table-responsive"><table class="admin-table">
+            <thead><tr><th>Producto</th><th>Categoría</th><th>Unidad base</th>
+                <th>Compra</th><th>Venta</th><th>Stock actual</th><th>Lotes</th>
+                <th>Valorización</th><th>Política</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>${items.map((item) => {
+                const lots = filtered('lote_inventario', 'id_item', item.id_item);
+                const value = lots.reduce((sum, l) => sum + Number(l.cantidad_inicial ?? 0) * Number(l.costo_unitario ?? 0), 0);
+                return `<tr>
+                    <td>${esc(cellText(item.nombre))}</td>
+                    <td>${labelFor('categoria_item', item.id_categoria)}</td>
+                    <td>${labelFor('unidad_medida', item.id_unidad_base)}</td>
+                    <td>${labelFor('unidad_medida', item.id_unidad_compra)} × ${num(item.factor_compra)}</td>
+                    <td>${labelFor('unidad_medida', item.id_unidad_venta)} × ${num(item.factor_venta)}</td>
+                    <td>${num(stockOfItem(item.id_item))} ${unitOfItem(item.id_item)}</td>
+                    <td>${lots.length}</td>
+                    <td>${money(value)}</td>
+                    <td>${esc(cellText(item.politica_consumo))}</td>
+                    <td>${pill(item.activo ? 'activo' : 'inactivo')}</td>
+                    <td class="table-actions">
+                        <button type="button" data-product-detail="${esc(item.id_item)}">
+                            <i class="fa-solid fa-list-check" aria-hidden="true"></i> Ver detalle</button>
+                        <button type="button" data-edit="item" data-id="${esc(item.id_item)}">Editar</button>
+                    </td></tr>`;
+            }).join('') || '<tr><td class="table-empty" colspan="11">No hay productos registrados.</td></tr>'}
+            </tbody></table></div>`;
+    }
+    wireTableActions('tableExplorer', refreshActive);
+    activateSection('tableExplorer');
 }
 
 // ---------- Precarga única de datos reales ----------
@@ -626,7 +1226,8 @@ async function refreshActive() {
     currentDetail = null;
     if (currentView) openView(currentView.key, { keepDetail: true });
     else renderModule(document.querySelector('.module-view.active')?.id || 'dashboard');
-    if (detail) showDetail(detail.masterTable, detail.fk, detail.id);
+    if (detail?.type === 'master') showMasterDetail(detail.table, detail.id);
+    else if (detail?.type === 'product') showProductDetail(detail.id);
 }
 
 function renderDashboard() {
@@ -638,19 +1239,19 @@ function renderDashboard() {
 
     const movements = [
         ...rowsOf('reservations').slice(0, 4).map((r) => [
-            `#R-${r.id}`, 'Reservas', `Reserva de ${esc(r.cliente)} · mesa ${esc(r.mesa)}`,
+            `Reserva ${fmt(r.fecha)}`, 'Reservas', `Reserva de ${esc(r.cliente)} · mesa ${esc(r.mesa)}`,
             `${r.comensales} pers.`, `${fmt(r.fecha)} ${String(r.hora).slice(0, 5)}`, pill(r.estado),
         ]),
         ...rowsOf('orders').slice(0, 4).map((o) => [
-            `#P-${o.id}`, 'Pedidos', `Pedido #${o.id} · reserva ${o.idReserva ?? '—'}`,
+            `Pedido ${fmt(o.fecha)}`, 'Pedidos', `Pedido de ${esc(labelFor('reserva', o.idReserva))}`,
             money(o.total), fmt(o.fecha), pill(o.estado),
         ]),
         ...rowsOf('sales').slice(0, 4).map((v) => [
-            `#V-${v.id_venta}`, 'Ventas', `Pedido #${v.id_pedido} · ${esc(v.medios)}`,
+            `Venta ${fmt(v.fecha_venta)}`, 'Ventas', `${esc(labelFor('pedido', v.id_pedido))} · ${esc(v.medios)}`,
             money(v.total), fmt(v.fecha_venta), pill(v.estado),
         ]),
         ...rowsOf('finance').slice(0, 4).map((a) => [
-            `#A-${a.id_movimiento_contable}`, 'Contabilidad', esc(a.detalle),
+            `Asiento ${fmt(a.fecha)}`, 'Contabilidad', esc(a.detalle),
             `${Number(a.signo) > 0 ? '+' : '−'}${money(a.monto)}`, fmt(a.fecha),
             `<span class="status-pill ${Number(a.signo) > 0 ? 'active' : 'cancelled'}">${Number(a.signo) > 0 ? 'Ingreso' : 'Egreso'}</span>`,
         ]),
@@ -685,7 +1286,7 @@ function renderCatalog() {
 function renderPurchases() {
     ensureActions('compras');
     renderRows('compras', rowsOf('purchases').map((row) => `<tr>
-        <td>#OC-${row.id_orden_compra}</td>
+        <td>${esc(labelFor('orden_compra', row.id_orden_compra))}</td>
         <td>${esc(row.proveedor)}</td>
         <td>${fmt(row.fecha_emision)}</td>
         <td>${pill(row.estado)}</td>
@@ -730,12 +1331,12 @@ function renderRooms() {
 
     ensureActions('sala');
     renderRows('sala', reservations.map((r) => `<tr>
-        <td>#R-${r.id}</td><td>${esc(r.cliente)}</td><td>${esc(r.mesa)}</td>
+        <td>Reserva ${fmt(r.fecha)}</td><td>${esc(r.cliente)}</td><td>${esc(r.mesa)}</td>
         <td>${r.comensales}</td><td>${r.fecha} ${String(r.hora).slice(0, 5)}</td>
         <td>${pill(r.estado)}</td>
         <td class="table-actions">
             <div class="status-editor">
-                <select data-status-reservation="${r.id}" data-original="${esc(r.estado)}" aria-label="Cambiar estado de la reserva ${r.id}">
+                <select data-status-reservation="${r.id}" data-original="${esc(r.estado)}" aria-label="Cambiar estado de la reserva de ${esc(r.cliente)}">
                     ${['pendiente', 'confirmada', 'cancelada', 'cumplida', 'no_asistio']
                         .map((state) => `<option value="${state}" ${state === r.estado ? 'selected' : ''}>${state}</option>`).join('')}
                 </select>
@@ -781,18 +1382,18 @@ function renderRooms() {
                 </button>
             </div>
             <div class="table-responsive"><table class="admin-table">
-                <thead><tr><th>ID</th><th>Número</th><th>Capacidad</th><th>Activa</th><th>Acciones</th></tr></thead>
+                <thead><tr><th>Número</th><th>Capacidad</th><th>Activa</th><th>Acciones</th></tr></thead>
                 <tbody id="adminMesasBody"></tbody>
             </table></div>`;
         section.appendChild(mesasCard);
     }
     document.getElementById('adminMesasBody').innerHTML = rooms.map((room) => `<tr>
-        <td>${room.id_mesa}</td><td>${esc(room.numero)}</td><td>${room.capacidad}</td>
+        <td>${esc(room.numero)}</td><td>${room.capacidad}</td>
         <td>${pill(room.activa ? 'activo' : 'inactivo')}</td>
         <td class="table-actions">
             <button type="button" data-room-toggle="${room.id_mesa}" data-activa="${room.activa}">${room.activa ? 'Desactivar' : 'Activar'}</button>
             <button type="button" data-edit="mesa" data-id="${room.id_mesa}">Editar</button>
-        </td></tr>`).join('') || '<tr><td class="table-empty" colspan="5">No hay mesas registradas.</td></tr>';
+        </td></tr>`).join('') || '<tr><td class="table-empty" colspan="4">No hay mesas registradas.</td></tr>';
 
     document.querySelectorAll('[data-room-toggle]').forEach((button) => {
         button.onclick = async () => {
@@ -811,8 +1412,8 @@ function renderRooms() {
 function renderSales() {
     ensureActions('ventas');
     renderRows('ventas', rowsOf('sales').map((v) => `<tr>
-        <td>#V-${v.id_venta}</td>
-        <td>#C-${v.id_caja_sesion}</td>
+        <td>Venta ${fmt(v.fecha_venta)}</td>
+        <td>${esc(labelFor('caja_sesion', v.id_caja_sesion))}</td>
         <td>${esc(v.medios)}</td>
         <td>${money(v.total)}</td>
         <td>${fmt(v.fecha_venta)}</td>
@@ -828,7 +1429,7 @@ function renderSales() {
 function renderAccounting() {
     ensureActions('contabilidad');
     renderRows('contabilidad', rowsOf('finance').map((a) => `<tr>
-        <td>#A-${a.id_movimiento_contable}</td>
+        <td>Asiento ${fmt(a.fecha)}</td>
         <td>${esc(a.tipo)}</td>
         <td>${esc(a.detalle)}</td>
         <td>${Number(a.signo) > 0 ? '+' : '−'}</td>
@@ -848,10 +1449,10 @@ function renderUsers() {
     const tbody = document.getElementById('usersTableBody');
     if (!tbody) return;
     tbody.innerHTML = users.map((u) => `<tr>
-        <td>${u.id}</td><td>${esc(u.nombre)}</td><td>${esc(u.email)}</td>
+        <td>${esc(u.nombre)}</td><td>${esc(u.email)}</td>
         <td>${esc(u.roles || '—')}</td><td>${pill(u.activo ? 'activo' : 'inactivo')}</td>
         <td class="table-actions"><button type="button" data-edit="usuarios" data-id="${u.id}">Editar</button></td>
-    </tr>`).join('') || '<tr><td class="table-empty" colspan="6">No hay usuarios registrados.</td></tr>';
+    </tr>`).join('') || '<tr><td class="table-empty" colspan="5">No hay usuarios registrados.</td></tr>';
     wireTableActions('usuarios', refreshActive);
 }
 
@@ -964,6 +1565,130 @@ function fieldHtml(column, value) {
         <label for="field-${esc(name)}">${esc(label)}${required ? ' *' : ''}</label>${input}</div>`;
 }
 
+// ---------- Recetas: cabecera + ingredientes con comboboxes reales ----------
+const RECETA_FIELDS = ['nombre', 'id_item_resultante', 'tipo', 'rendimiento',
+    'id_unidad_rendimiento', 'activa'];
+
+function fkOptionsHtml(reference, selected) {
+    const options = [`<option value="">— Seleccionar ${esc(TABLE_LABELS[reference.table] || reference.table)} —</option>`]
+        .concat((reference.options || []).map((option) =>
+            `<option value="${esc(option.value)}" ${String(option.value) === String(selected) ? 'selected' : ''}>${esc(option.label)}</option>`));
+    return options.join('');
+}
+
+function ingredientRowHtml(columns, line = {}) {
+    const itemRef = columns.find((c) => c.name === 'id_item_insumo')?.reference
+        || { table: 'item', options: rowsOf('cat:item').map((r) => ({ value: r.id_item, label: r.nombre })) };
+    const unitRef = columns.find((c) => c.name === 'id_unidad')?.reference
+        || { table: 'unidad_medida', options: rowsOf('cat:unidad_medida').map((r) =>
+            ({ value: r.id_unidad, label: r.simbolo || r.nombre })) };
+    return `<div class="ingredient-row" data-line-id="${esc(line.id_receta_detalle ?? '')}">
+        <div class="form-field full">
+            <label for="ingredient-item-${esc(line.id_receta_detalle ?? 'new')}">Insumo</label>
+            <select id="ingredient-item-${esc(line.id_receta_detalle ?? 'new')}" name="id_item_insumo" required>
+                ${fkOptionsHtml(itemRef, line.id_item_insumo)}</select>
+        </div>
+        <div class="form-field"><label>Cantidad</label>
+            <input type="number" step="any" name="cantidad" value="${esc(line.cantidad ?? '')}" required></div>
+        <div class="form-field"><label>Unidad</label>
+            <select name="id_unidad" required>${fkOptionsHtml(unitRef, line.id_unidad)}</select></div>
+        <div class="form-field"><label>Merma esperada (%)</label>
+            <input type="number" step="any" name="merma_esperada_pct" value="${esc(line.merma_esperada_pct ?? 0)}"></div>
+        <button type="button" class="btn-red" data-remove-ingredient aria-label="Quitar ingrediente">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </div>`;
+}
+
+async function openRecipeForm(id = null) {
+    try {
+        const [meta, detailMeta] = await Promise.all([
+            adminApi('data/receta/schema'), adminApi('data/receta_detalle/schema'),
+        ]);
+        const row = id === null ? {} : await adminApi(`data/receta/${id}`);
+        const lines = id === null ? [] : filtered('receta_detalle', 'id_receta', id);
+        modalState = {
+            mode: 'recipe', id,
+            columns: meta.columns.filter((column) => RECETA_FIELDS.includes(column.name)),
+            detailColumns: detailMeta.columns,
+            lines,
+        };
+        document.getElementById('adminModalTitle').textContent = id === null
+            ? 'Nueva receta con ingredientes' : `Editar receta: ${row.nombre ?? id}`;
+        document.getElementById('adminFormFields').innerHTML = `<div class="form-grid">
+                ${modalState.columns.map((column) => fieldHtml(column, row[column.name])).join('')}
+            </div>
+            <div class="recipe-ingredients">
+                <div class="card-header-bar">
+                    <h2><i class="fa-solid fa-bowl-food" aria-hidden="true"></i> Ingredientes</h2>
+                    <button type="button" class="btn-gold" id="addIngredient">
+                        <i class="fa-solid fa-plus" aria-hidden="true"></i> Agregar ingrediente</button>
+                </div>
+                <p class="form-hint">Insumo y unidad se eligen en comboboxes con los datos reales de la base.</p>
+                <div id="ingredientRows">${lines.map((line) => ingredientRowHtml(detailMeta.columns, line)).join('')}</div>
+            </div>`;
+        document.getElementById('adminFormError').textContent = '';
+        document.getElementById('adminModal').hidden = false;
+        document.querySelector('#adminForm input, #adminForm select')?.focus();
+    } catch (error) { toast(error.message); }
+}
+
+function collectIngredients() {
+    return [...document.querySelectorAll('#ingredientRows .ingredient-row')].map((row) => ({
+        id: row.dataset.lineId ? Number(row.dataset.lineId) : null,
+        id_item_insumo: Number(row.querySelector('[name="id_item_insumo"]')?.value) || null,
+        cantidad: Number(row.querySelector('[name="cantidad"]')?.value) || null,
+        id_unidad: Number(row.querySelector('[name="id_unidad"]')?.value) || null,
+        merma_esperada_pct: Number(row.querySelector('[name="merma_esperada_pct"]')?.value) || 0,
+    })).filter((line) => line.id_item_insumo);
+}
+
+async function saveRecipe() {
+    const form = document.getElementById('adminForm');
+    const values = {};
+    for (const column of modalState.columns) {
+        if (!column.editable || column.computed) continue;
+        const field = form.elements[column.name];
+        if (!field) continue;
+        if (column.type.includes('boolean')) values[column.name] = field.checked;
+        else if (field.value !== '') {
+            values[column.name] = column.reference
+                || /integer|numeric|decimal|real|double/.test(column.type)
+                ? Number(field.value) : field.value;
+        } else if (column.nullable === 'NO' && !column.default) {
+            throw new Error(`El campo ${column.name} es obligatorio`);
+        }
+    }
+    const lines = collectIngredients();
+    if (modalState.id === null) {
+        const created = await adminApi('data/receta', { method: 'POST', body: JSON.stringify(values) });
+        const recipeId = created.id_receta ?? created.id;
+        for (const line of lines) {
+            await adminApi('data/receta_detalle', {
+                method: 'POST',
+                body: JSON.stringify({ ...line, id: undefined, id_receta: recipeId }),
+            });
+        }
+    } else {
+        await adminApi(`data/receta/${modalState.id}`, { method: 'PATCH', body: JSON.stringify(values) });
+        const kept = new Set(lines.filter((line) => line.id).map((line) => line.id));
+        for (const original of modalState.lines) {
+            if (!kept.has(Number(original.id_receta_detalle))) {
+                await adminApi(`data/receta_detalle/${original.id_receta_detalle}`, { method: 'DELETE' });
+            }
+        }
+        for (const line of lines) {
+            const payload = { ...line };
+            delete payload.id;
+            await adminApi(line.id
+                ? `data/receta_detalle/${line.id}`
+                : 'data/receta_detalle', {
+                method: line.id ? 'PATCH' : 'POST',
+                body: JSON.stringify(line.id ? payload : { ...payload, id_receta: modalState.id }),
+            });
+        }
+    }
+}
+
 async function openRecordForm(table, id = null, prefill = null) {
     try {
         const meta = await adminApi(`data/${table}/schema`);
@@ -971,7 +1696,7 @@ async function openRecordForm(table, id = null, prefill = null) {
         modalState = { mode: 'record', table, id, columns: meta.columns };
 
         document.getElementById('adminModalTitle').textContent =
-            id === null ? `Nuevo registro · ${TABLE_LABELS[table] || table}` : `Editar ${table} #${id}`;
+            id === null ? `Nuevo registro · ${TABLE_LABELS[table] || table}` : `Editar ${TABLE_LABELS[table] || table}`;
         document.getElementById('adminFormFields').innerHTML =
             `<div class="form-grid">${meta.columns.map((c) =>
                 fieldHtml(c, row[c.name] ?? prefill?.[c.name])).join('')}</div>`;
@@ -1008,6 +1733,8 @@ async function saveModal(event) {
         if (modalState.mode === 'user') {
             const values = Object.fromEntries(new FormData(form));
             await adminApi('users', { method: 'POST', body: JSON.stringify(values) });
+        } else if (modalState.mode === 'recipe') {
+            await saveRecipe();
         } else {
             const values = {};
             for (const column of modalState.columns) {
@@ -1134,6 +1861,20 @@ if (isAdmin) {
     document.getElementById('newUserBtn').addEventListener('click', openUserForm);
     document.getElementById('adminForm').addEventListener('submit', saveModal);
     document.addEventListener('click', (event) => {
+        const recipeNew = event.target.closest('[data-recipe-new]');
+        if (recipeNew) { openRecipeForm(); return; }
+        const recipeEdit = event.target.closest('[data-recipe-edit]');
+        if (recipeEdit) { openRecipeForm(recipeEdit.dataset.recipeEdit); return; }
+        const addIngredient = event.target.closest('#addIngredient');
+        if (addIngredient) {
+            document.getElementById('ingredientRows')?.insertAdjacentHTML('beforeend',
+                ingredientRowHtml(modalState?.detailColumns || []));
+            return;
+        }
+        const removeIngredient = event.target.closest('[data-remove-ingredient]');
+        if (removeIngredient) { removeIngredient.closest('.ingredient-row')?.remove(); return; }
+        const productButton = event.target.closest('[data-product-detail]');
+        if (productButton) { showProductDetail(productButton.dataset.productDetail); return; }
         const button = event.target.closest('[data-new-table]');
         if (button) {
             const prefill = button.dataset.prefillFk
