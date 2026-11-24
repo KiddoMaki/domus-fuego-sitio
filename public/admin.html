@@ -77,6 +77,11 @@
                     <i class="fa-solid fa-users-gear" aria-hidden="true"></i> Usuarios & Roles
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button role="tab" aria-selected="false" aria-controls="catalogos" class="nav-link" onclick="switchTab('catalogos', this)">
+                    <i class="fa-solid fa-database" aria-hidden="true"></i> Catálogos y Tablas
+                </button>
+            </li>
 
             <div class="nav-section-title" id="navSecurityHeading" style="margin-top: 15px;">Seguridad & Control</div>
             <li class="nav-item" role="presentation">
@@ -215,7 +220,7 @@
                 <div class="table-card">
                     <div class="card-header-bar">
                         <h2><i class="fa-solid fa-list-check" aria-hidden="true"></i> Catálogo de Insumos y Productos (item, categoria_item, lote_inventario)</h2>
-                        <button class="btn-gold" style="font-size: 11px; padding: 6px 12px;"><i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo Item</button>
+                        <button type="button" class="btn-gold" data-new-table="item" style="font-size: 11px; padding: 6px 12px;"><i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo Item</button>
                     </div>
                     <div class="table-responsive">
                         <table class="admin-table">
@@ -241,7 +246,7 @@
                 <div class="table-card">
                     <div class="card-header-bar">
                         <h2><i class="fa-solid fa-truck" aria-hidden="true"></i> Gestión de Proveedores y Órdenes de Compra (proveedor, orden_compra, recepcion)</h2>
-                        <button class="btn-gold" style="font-size: 11px; padding: 6px 12px;"><i class="fa-solid fa-plus" aria-hidden="true"></i> Nueva Orden</button>
+                        <button type="button" class="btn-gold" data-new-table="orden_compra" style="font-size: 11px; padding: 6px 12px;"><i class="fa-solid fa-plus" aria-hidden="true"></i> Nueva Orden</button>
                     </div>
                     <div class="table-responsive">
                         <table class="admin-table">
@@ -435,6 +440,19 @@
                             <thead><tr><th>ID</th><th>Nombre</th><th>Correo</th><th>Roles</th><th>Estado</th><th>Acciones</th></tr></thead>
                             <tbody id="usersTableBody"><tr><td class="table-empty" colspan="8">Cargando datos reales…</td></tr></tbody>
                         </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CATÁLOGOS INDEPENDIENTES -->
+            <section id="catalogos" class="module-view" role="tabpanel">
+                <div class="table-card">
+                    <div class="card-header-bar">
+                        <h2><i class="fa-solid fa-database" aria-hidden="true"></i> Tablas independientes (CRUD completo)</h2>
+                        <input type="search" id="catalogFilter" placeholder="Filtrar tabla…" aria-label="Filtrar tablas del catálogo">
+                    </div>
+                    <div style="padding: 16px 20px 0;">
+                        <p class="catalog-help">Cada tarjeta permite crear, editar y eliminar registros. Los campos de relación (proveedor, producto, unidad, usuario, rol, etc.) se eligen en comboboxes con los datos reales de la base.</p>
                     </div>
                 </div>
             </section>

@@ -10,7 +10,8 @@
     "test": "node --test",
     "seed": "node db/seed.mjs",
     "seed:operativo": "node db/seed_operativo.mjs",
-    "seed:volumen": "node db/seed_volumen.mjs"
+    "seed:volumen": "node db/seed_volumen.mjs",
+    "migrate": "node --env-file=.env db/apply_migration.mjs"
   },
   "dependencies": {
     "@neon/config": "^1.14.6",

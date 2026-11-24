@@ -42,6 +42,7 @@ export const adminService = {
   sales: () => adminModel.sales(),
   audit: () => adminModel.audit(),
   logs: (limit) => adminModel.logs(limit),
+  itemUnidades: () => adminModel.itemUnidades(),
 
   schema(table) {
     try {

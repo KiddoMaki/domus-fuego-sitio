@@ -779,6 +779,15 @@
 .form-field input:focus,
 .form-field select:focus,
 .form-field textarea:focus { outline: none; border-color: var(--color-gold); }
+.form-field input:disabled { opacity: .78; cursor: not-allowed; }
+.form-field label small { text-transform: none; letter-spacing: 0; color: var(--color-gold); }
+.form-hint { font-size: 10px; color: var(--color-text-muted); line-height: 1.45; }
+.catalog-count { font-family: inherit; font-size: 10px; color: var(--color-text-muted); margin-left: 8px; }
+.catalog-help { font-size: 12px; color: var(--color-text-muted); line-height: 1.6; margin: 0 0 18px; }
+#catalogFilter {
+    background: var(--color-black-elevated); border: 1px solid var(--color-black-border);
+    color: var(--color-white); padding: 8px 12px; border-radius: 4px; font-size: 12px; min-width: 190px;
+}
 .form-error { color: #ff6b6b; font-size: 11px; min-height: 16px; margin: 12px 0 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 .modal-actions button { cursor: pointer; }

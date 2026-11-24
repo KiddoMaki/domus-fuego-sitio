@@ -55,11 +55,23 @@ const PK = Object.freeze({
   tipo_movimiento: "id_tipo_movimiento",
   tipo_movimiento_contable: "id_tipo_movimiento_contable",
   unidad_medida: "id_unidad",
+  usuario: "id_usuario",
   usuarios: "id_usuario",
   venta: "id_venta",
 });
 
 export const ADMIN_TABLES = Object.freeze(PK);
+
+// Columnas que el panel solo muestra (las calcula la base de datos).
+const COMPUTED_COLUMNS = new Set([
+  "factor_compra", "factor_venta", "created_at", "updated_at", "fecha_calculo",
+]);
+// Nunca se editan desde el formulario genérico (se gestionan en /api/auth).
+const HIDDEN_COLUMNS = new Set(["password_hash"]);
+const LABEL_PRIORITY = [
+  "nombre", "name", "descripcion", "concepto", "codigo_lote", "codigo",
+  "numero", "email", "simbolo", "detalle", "motivo", "tipo", "observaciones",
+];
 
 function assertTable(table) {
   if (!Object.hasOwn(PK, table)) throw new Error("Tabla no permitida");
@@ -82,6 +94,55 @@ async function columnsOf(table) {
   return resultRows(result);
 }
 
+// Llaves foráneas reales de la tabla, una por columna (las FK compuestas se deduplican).
+async function foreignKeysOf(table) {
+  const result = await getDb().execute(sql`
+    select a.attname as "column",
+           co.confrelid::regclass::text as "refTable",
+           ca.attname as "refColumn"
+    from pg_constraint co
+    join pg_attribute a on a.attrelid = co.conrelid and a.attnum = any(co.conkey)
+    join pg_attribute ca on ca.attrelid = co.confrelid and ca.attnum = any(co.confkey)
+    where co.contype = 'f'
+      and co.connamespace = 'public'::regnamespace
+      and co.conrelid = (
+        select oid from pg_class
+        where relname = ${table} and relnamespace = 'public'::regnamespace
+      )
+    order by a.attname
+  `);
+  const score = (fk) => {
+    const expected = fk.column.replace(/^id_/, "");
+    let points = 0;
+    if (fk.refTable === expected) points += 5;
+    if (fk.refTable === `${expected}s`) points += 2;
+    if (PK[fk.refTable] === fk.refColumn) points += 3;
+    return points;
+  };
+  const found = new Map();
+  for (const fk of resultRows(result)) {
+    const current = found.get(fk.column);
+    if (!current || score(fk) > score(current)) found.set(fk.column, fk);
+  }
+  return found;
+}
+
+// Opciones legibles para un combobox: valor = llave foránea, etiqueta = columna descriptiva.
+async function optionsOf(refTable, refColumn, labelColumn) {
+  const label = labelColumn ? sql.identifier(labelColumn) : sql`${sql.identifier(refColumn)}::text`;
+  const result = await getDb().execute(sql`
+    select ${sql.identifier(refColumn)} as value, ${label} as label
+    from ${sql.identifier(refTable)}
+    where ${label} is not null
+    order by ${label}
+    limit 200
+  `);
+  return resultRows(result).map((row) => ({
+    value: Number(row.value),
+    label: row.label == null || row.label === "" ? `${refTable} #${row.value}` : String(row.label),
+  }));
+}
+
 // Se usan alias reales para que la subconsulta esté correlacionada con la tabla
 // externa item_presentacion (Drizzle no califica columnas dentro de sql``).
 const precioVigente = sql`(SELECT pv.precio
@@ -98,14 +159,39 @@ export const adminModel = {
 
   async schema(table) {
     assertTable(table);
-    return {
-      table,
-      pk: PK[table],
-      columns: (await columnsOf(table)).map((column) => ({
+    const [columns, foreignKeys] = await Promise.all([
+      columnsOf(table), foreignKeysOf(table),
+    ]);
+    const refColumns = new Map();
+    const enriched = [];
+    for (const column of columns) {
+      const fk = foreignKeys.get(column.name);
+      let reference = null;
+      if (fk) {
+        if (!refColumns.has(fk.refTable)) {
+          refColumns.set(fk.refTable, (await columnsOf(fk.refTable)).map((c) => c.name));
+        }
+        const labelColumn = LABEL_PRIORITY.find((name) => refColumns.get(fk.refTable).includes(name)) ?? null;
+        reference = {
+          table: fk.refTable,
+          column: fk.refColumn,
+          labelColumn,
+          options: await optionsOf(fk.refTable, fk.refColumn, labelColumn),
+        };
+      }
+      enriched.push({
         ...column,
-        editable: !column.identity && column.name !== PK[table],
-      })),
-    };
+        editable: !column.identity && column.name !== PK[table] && !HIDDEN_COLUMNS.has(column.name),
+        computed: COMPUTED_COLUMNS.has(column.name),
+        ...(reference ? { reference } : {}),
+      });
+    }
+    return { table, pk: PK[table], columns: enriched };
+  },
+
+  async itemUnidades() {
+    const result = await getDb().execute(sql`select * from vw_item_unidades order by id_item`);
+    return resultRows(result);
   },
 
   async list(table, limit = 100) {
@@ -128,7 +214,9 @@ export const adminModel = {
   async create(table, values) {
     const pk = assertTable(table);
     const metadata = await columnsOf(table);
-    const allowed = new Set(metadata.filter((c) => !c.identity).map((c) => c.name));
+    const allowed = new Set(metadata
+      .filter((c) => !c.identity && !COMPUTED_COLUMNS.has(c.name) && !HIDDEN_COLUMNS.has(c.name))
+      .map((c) => c.name));
     const entries = Object.entries(values ?? {}).filter(
       ([key, value]) => allowed.has(key) && value !== "" && value !== null && value !== undefined
     );
@@ -145,7 +233,9 @@ export const adminModel = {
   async update(table, id, values) {
     const pk = assertTable(table);
     const metadata = await columnsOf(table);
-    const allowed = new Set(metadata.filter((c) => c.name !== pk).map((c) => c.name));
+    const allowed = new Set(metadata
+      .filter((c) => c.name !== pk && !COMPUTED_COLUMNS.has(c.name) && !HIDDEN_COLUMNS.has(c.name))
+      .map((c) => c.name));
     const entries = Object.entries(values ?? {}).filter(([key, value]) => allowed.has(key));
     if (!entries.length) throw new Error("No hay campos válidos para actualizar");
 

@@ -26,6 +26,7 @@ router.get("/cash", asyncHandler(controller.cash));
 router.get("/sales", asyncHandler(controller.sales));
 router.get("/audit", asyncHandler(controller.audit));
 router.get("/logs", asyncHandler(controller.logs));
+router.get("/item-unidades", asyncHandler(controller.itemUnidades));
 
 router.patch(
   "/reservations/:id/estado",
@@ -49,6 +50,7 @@ router.post(
 );
 
 // Acceso genérico a las tablas permitidas (altas, ediciones y bajas).
+router.get("/data", asyncHandler(controller.tables));
 router.get("/data/:table/schema", validate({ params: schemas.adminTableBody }), asyncHandler(controller.schema));
 router.get("/data/:table", validate({ params: schemas.adminTableBody }), asyncHandler(controller.list));
 router.get(

@@ -63,6 +63,10 @@ export async function logs(req, res) {
   return res.json(await adminService.logs(limit));
 }
 
+export async function itemUnidades(req, res) {
+  return res.json(await adminService.itemUnidades());
+}
+
 export async function schema(req, res) {
   return res.json(await adminService.schema(req.params.table));
 }

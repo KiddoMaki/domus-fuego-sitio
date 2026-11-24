@@ -13,7 +13,8 @@ const titles = {
     'contabilidad': 'Módulo: Finanzas & Gastos',
     'er_model': 'Diagrama Entidad-Relación',
     'auditoria': 'Seguridad: Auditoría & Bitácora',
-    'usuarios': 'Módulo: Usuarios & Roles'
+    'usuarios': 'Módulo: Usuarios & Roles',
+    'catalogos': 'Módulo: Catálogos y Tablas'
 };
 
 function toggleSidebar(open) {
@@ -102,7 +103,7 @@ function pill(state) {
     const value = String(state ?? '').toLowerCase();
     const active = ['confirmada', 'activo', 'abierto', 'abierta', 'pagado', 'pagada',
         'listo', 'entregado', 'recibida', 'completa', 'terminada', 'servido',
-        'cerrada', 'cerrado', 'aprobado', 'disponible'].includes(value);
+        'cerrada', 'cerrado', 'aprobado', 'disponible', 'ok'].includes(value);
     const pending = ['pendiente', 'en_preparacion', 'planificada', 'en_proceso',
         'parcial'].includes(value);
     const tone = active ? 'active' : pending ? 'pending' : 'cancelled';
@@ -132,6 +133,126 @@ function renderRows(section, html, emptyMessage = 'No hay registros en este mód
     tbody.innerHTML = html || `<tr><td class="table-empty" colspan="${colspan}">${esc(emptyMessage)}</td></tr>`;
 }
 
+const cellText = (value) => {
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+    if (typeof value === 'object') return JSON.stringify(value).slice(0, 80);
+    return String(value).slice(0, 90);
+};
+
+// ---------- Catálogos / CRUDs independientes por módulo ----------
+function catalogPkOf(table, rows) {
+    const known = rowsOf('tables').find((item) => item.table === table);
+    return known?.pk || Object.keys(rows[0] || {})[0] || 'id';
+}
+
+function renderCatalogCard(container, table) {
+    const rows = rowsOf(`cat:${table}`);
+    let card = document.getElementById(`catalog-${table}`);
+    if (!card) {
+        card = document.createElement('div');
+        card.id = `catalog-${table}`;
+        card.className = 'table-card catalog-card';
+        card.style.marginTop = '18px';
+        container.appendChild(card);
+    }
+    const pk = catalogPkOf(table, rows);
+    const columns = rows.length
+        ? Object.keys(rows[0]).filter((name) => name !== 'password_hash').slice(0, 7)
+        : [pk];
+    card.innerHTML = `<div class="card-header-bar">
+            <h2><i class="fa-solid fa-table" aria-hidden="true"></i> ${esc(table)}
+                <span class="catalog-count">${rows.length} registro(s)</span></h2>
+            <button type="button" class="btn-gold" data-new-table="${esc(table)}">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo
+            </button>
+        </div>
+        <div class="table-responsive"><table class="admin-table">
+            <thead><tr>${columns.map((name) => `<th scope="col">${esc(name)}</th>`).join('')}
+                <th scope="col">Acciones</th></tr></thead>
+            <tbody>${rows.map((row) => `<tr>
+                ${columns.map((name) => `<td>${esc(cellText(row[name]))}</td>`).join('')}
+                <td class="table-actions">
+                    <button type="button" data-edit="${esc(table)}" data-id="${esc(row[pk])}">Editar</button>
+                    <button type="button" data-delete="${esc(table)}" data-id="${esc(row[pk])}">Eliminar</button>
+                </td></tr>`).join('') || `<tr><td class="table-empty" colspan="${columns.length + 1}">Sin registros en ${esc(table)}.</td></tr>`}
+            </tbody>
+        </table></div>`;
+}
+
+function renderModuleCatalogs(section) {
+    let zone = document.getElementById(`catalog-zone-${section}`);
+    if (!zone) {
+        zone = document.createElement('div');
+        zone.id = `catalog-zone-${section}`;
+        document.querySelector(`#${section}`)?.appendChild(zone);
+    }
+    (moduleCatalogTables[section] || []).forEach((table) => renderCatalogCard(zone, table));
+    wireTableActions(section, refreshActive);
+}
+
+function renderAllCatalogs() {
+    let zone = document.getElementById('catalog-zone-catalogos');
+    if (!zone) {
+        const section = document.getElementById('catalogos');
+        zone = document.createElement('div');
+        zone.id = 'catalog-zone-catalogos';
+        section?.appendChild(zone);
+    }
+    const tables = rowsOf('tables')
+        .map((item) => item.table)
+        .filter((table) => table !== 'auditoria_log');
+    tables.forEach((table) => renderCatalogCard(zone, table));
+    wireTableActions('catalogos', refreshActive);
+    const filter = document.getElementById('catalogFilter');
+    if (filter && !filter.dataset.wired) {
+        filter.dataset.wired = 'true';
+        filter.addEventListener('input', () => {
+            const q = filter.value.trim().toLowerCase();
+            zone.querySelectorAll('.catalog-card').forEach((card) => {
+                card.hidden = !card.id.replace('catalog-', '').toLowerCase().includes(q);
+            });
+        });
+    }
+}
+
+function renderItemUnitsCard() {
+    let card = document.getElementById('adminItemUnitsCard');
+    if (!card) {
+        card = document.createElement('div');
+        card.id = 'adminItemUnitsCard';
+        card.className = 'table-card';
+        card.style.marginTop = '18px';
+        card.innerHTML = `<div class="card-header-bar">
+                <h2><i class="fa-solid fa-ruler-combined" aria-hidden="true"></i>
+                    Unidades de medida por producto (con conversión automática)</h2>
+                <span class="catalog-count">factor = unidad ÷ unidad base · se calcula en la BD</span>
+            </div>
+            <div class="table-responsive"><table class="admin-table">
+                <thead><tr><th>Producto</th><th>Base</th><th>Compra</th><th>Factor compra</th>
+                    <th>Venta</th><th>Factor venta</th><th>Estado</th><th>Acciones</th></tr></thead>
+                <tbody id="adminItemUnitsBody"></tbody>
+            </table></div>`;
+        document.getElementById('inventario')?.appendChild(card);
+        card.addEventListener('click', (event) => {
+            const edit = event.target.closest('[data-edit]');
+            if (edit) openRecordForm(edit.dataset.edit, edit.dataset.id);
+        });
+    }
+    const body = document.getElementById('adminItemUnitsBody');
+    if (!body) return;
+    body.innerHTML = rowsOf('itemUnits').map((u) => `<tr>
+        <td>${esc(u.producto)}</td>
+        <td>${esc(u.simbolo_base ?? u.unidad_base)}</td>
+        <td>${esc(u.simbolo_compra ?? u.unidad_compra ?? '—')}</td>
+        <td>${u.factor_compra ?? '—'}</td>
+        <td>${esc(u.simbolo_venta ?? u.unidad_venta ?? '—')}</td>
+        <td>${u.factor_venta ?? '—'}</td>
+        <td>${pill(u.estado)}</td>
+        <td class="table-actions"><button type="button" data-edit="item" data-id="${u.id_item}">Editar producto</button></td>
+    </tr>`).join('') || '<tr><td class="table-empty" colspan="8">No hay unidades configuradas.</td></tr>';
+}
+
 // ---------- Precarga única de datos reales ----------
 const dataEndpoints = {
     overview: 'overview',
@@ -148,7 +269,27 @@ const dataEndpoints = {
     audit: 'audit',
     logs: 'logs',
     mesas: 'data/mesa',
+    tables: 'data',
+    itemUnits: 'item-unidades',
 };
+
+// Catálogos independientes que se pueden crear/editar/borrar desde cada módulo.
+const moduleCatalogTables = {
+    inventario: ['categoria_item', 'item', 'item_presentacion', 'precio_venta',
+        'unidad_medida', 'proveedor', 'item_proveedor'],
+    compras: ['proveedor', 'orden_compra', 'orden_compra_detalle', 'recepcion', 'recepcion_detalle'],
+    produccion: ['receta', 'receta_detalle', 'costo_receta', 'costo_receta_detalle',
+        'orden_produccion', 'orden_produccion_detalle', 'merma', 'tipo_movimiento'],
+    sala: ['cliente', 'mesa', 'reserva', 'reserva_detalle'],
+    ventas: ['caja_sesion', 'pedido', 'pedido_detalle', 'venta', 'pago'],
+    contabilidad: ['categoria_gasto', 'gasto_operativo', 'tipo_movimiento_contable',
+        'movimiento_contable', 'tipo_movimiento'],
+    usuarios: ['usuario', 'usuarios', 'roles', 'rolesxusuario', 'cliente'],
+};
+const catalogTables = [...new Set(Object.values(moduleCatalogTables).flat())];
+Object.assign(dataEndpoints, Object.fromEntries(
+    catalogTables.map((table) => [`cat:${table}`, `data/${table}?limit=100`])
+));
 
 const cache = Object.create(null);
 const loadErrors = Object.create(null);
@@ -203,9 +344,11 @@ function renderModule(key) {
         usuarios: renderUsers,
         auditoria: renderAudit,
         er_model: renderErModel,
+        catalogos: renderAllCatalogs,
     };
     try {
         renderers[key]?.();
+        if (moduleCatalogTables[key]) renderModuleCatalogs(key);
     } catch (error) {
         toast(error.message);
     }
@@ -270,6 +413,7 @@ function renderCatalog() {
         </td>
     </tr>`).join(''));
     wireTableActions('inventario', refreshActive);
+    renderItemUnitsCard();
 }
 
 function renderPurchases() {
@@ -375,10 +519,6 @@ function renderRooms() {
                 <tbody id="adminMesasBody"></tbody>
             </table></div>`;
         section.appendChild(mesasCard);
-        mesasCard.addEventListener('click', (event) => {
-            const button = event.target.closest('[data-new-table]');
-            if (button) openRecordForm(button.dataset.newTable);
-        });
     }
     document.getElementById('adminMesasBody').innerHTML = rooms.map((room) => `<tr>
         <td>${room.id_mesa}</td><td>${esc(room.numero)}</td><td>${room.capacidad}</td>
@@ -516,29 +656,46 @@ function closeModal() {
 }
 
 function fieldHtml(column, value) {
-    if (!column.editable) return '';
     const name = column.name;
     const label = name.replace(/_/g, ' ');
     const required = column.nullable === 'NO' && !column.default;
     const type = column.type || '';
     let input;
+    let full = type === 'text';
 
-    if (type.includes('boolean')) {
-        const checked = value === true || value === 'true' || value === 't' || Number(value) === 1;
-        input = `<input type="checkbox" name="${name}" ${checked ? 'checked' : ''}>`;
-    } else if (type === 'date') {
-        input = `<input type="date" name="${name}" value="${esc(String(value ?? '').slice(0, 10))}">`;
-    } else if (type === 'time' || type.includes('without time zone')) {
-        input = `<input type="text" name="${name}" value="${esc(String(value ?? '').slice(0, 19))}" placeholder="HH:MM:SS">`;
-    } else if (/integer|numeric|decimal|real|double/.test(type)) {
-        input = `<input type="number" step="any" name="${name}" value="${esc(value ?? '')}">`;
-    } else if (type === 'text' && /descripcion|observacion|detalle|concepto/.test(name)) {
-        input = `<textarea name="${name}" rows="3">${esc(value ?? '')}</textarea>`;
-    } else {
-        input = `<input type="text" name="${name}" value="${esc(value ?? '')}">`;
+    if (column.computed) {
+        return `<div class="form-field full">
+            <label for="field-${esc(name)}">${esc(label)} <small>(calculado)</small></label>
+            <input type="text" id="field-${esc(name)}" value="${esc(value ?? 'Se calculará al guardar')}" disabled>
+            <small class="form-hint">Lo calcula la base de datos a partir de la unidad de medida.</small>
+        </div>`;
     }
-    return `<div class="form-field ${type === 'text' ? 'full' : ''}">
-        <label for="field-${esc(name)}">${esc(label)}${required ? ' *' : ''}</label>${input.replace('<input', `<input id="field-${esc(name)}"`).replace('<textarea', `<textarea id="field-${esc(name)}"`)}</div>`;
+    if (!column.editable) return '';
+
+    if (column.reference) {
+        const ref = column.reference;
+        const selected = value === null || value === undefined ? '' : String(value);
+        const options = [`<option value="">— Seleccionar ${esc(ref.table)} —</option>`]
+            .concat(ref.options.map((option) =>
+                `<option value="${esc(option.value)}" ${String(option.value) === selected ? 'selected' : ''}>${esc(option.label)}</option>`));
+        input = `<select id="field-${esc(name)}" name="${name}" data-fk="${esc(ref.table)}" ${required ? 'required' : ''}>${options.join('')}</select>`;
+        full = true;
+    } else if (type.includes('boolean')) {
+        const checked = value === true || value === 'true' || value === 't' || Number(value) === 1;
+        input = `<input type="checkbox" id="field-${esc(name)}" name="${name}" ${checked ? 'checked' : ''}>`;
+    } else if (type === 'date') {
+        input = `<input type="date" id="field-${esc(name)}" name="${name}" value="${esc(String(value ?? '').slice(0, 10))}">`;
+    } else if (type === 'time' || type.includes('without time zone')) {
+        input = `<input type="text" id="field-${esc(name)}" name="${name}" value="${esc(String(value ?? '').slice(0, 19))}" placeholder="HH:MM:SS">`;
+    } else if (/integer|numeric|decimal|real|double/.test(type)) {
+        input = `<input type="number" step="any" id="field-${esc(name)}" name="${name}" value="${esc(value ?? '')}">`;
+    } else if (type === 'text' && /descripcion|observacion|detalle|concepto/.test(name)) {
+        input = `<textarea id="field-${esc(name)}" name="${name}" rows="3">${esc(value ?? '')}</textarea>`;
+    } else {
+        input = `<input type="text" id="field-${esc(name)}" name="${name}" value="${esc(value ?? '')}">`;
+    }
+    return `<div class="form-field ${full ? 'full' : ''}">
+        <label for="field-${esc(name)}">${esc(label)}${required ? ' *' : ''}</label>${input}</div>`;
 }
 
 async function openRecordForm(table, id = null) {
@@ -587,12 +744,13 @@ async function saveModal(event) {
         } else {
             const values = {};
             for (const column of modalState.columns) {
-                if (!column.editable) continue;
+                if (!column.editable || column.computed) continue;
                 const field = form.elements[column.name];
                 if (!field) continue;
                 if (column.type.includes('boolean')) values[column.name] = field.checked;
                 else if (field.value !== '') {
-                    values[column.name] = /integer|numeric|decimal|real|double/.test(column.type)
+                    values[column.name] = column.reference
+                        || /integer|numeric|decimal|real|double/.test(column.type)
                         ? Number(field.value) : field.value;
                 } else if (column.nullable === 'NO' && !column.default) {
                     throw new Error(`El campo ${column.name} es obligatorio`);
@@ -641,7 +799,6 @@ function addNewButton(section, table) {
     button.className = 'btn-gold';
     button.dataset.newTable = table;
     button.innerHTML = '<i class="fa-solid fa-plus" aria-hidden="true"></i> Nuevo registro';
-    button.addEventListener('click', () => openRecordForm(table));
     header.appendChild(button);
 }
 
@@ -709,6 +866,10 @@ if (isAdmin) {
     });
     document.getElementById('newUserBtn').addEventListener('click', openUserForm);
     document.getElementById('adminForm').addEventListener('submit', saveModal);
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-new-table]');
+        if (button) openRecordForm(button.dataset.newTable);
+    });
     document.getElementById('adminModalClose').addEventListener('click', closeModal);
     document.getElementById('adminFormCancel').addEventListener('click', closeModal);
     document.getElementById('adminModal').addEventListener('click', (event) => {

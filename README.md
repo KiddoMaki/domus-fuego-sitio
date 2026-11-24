@@ -15,7 +15,7 @@
 | Health check de la API | https://domus-fuego-sitio.netlify.app/api/health |
 | API Express local | http://localhost:3000/api (`npm run dev:api`) |
 | Proyecto en Netlify | https://app.netlify.com/projects/domus-fuego-sitio |
-| Deploy actual | https://app.netlify.com/projects/domus-fuego-sitio/deploys/6b05a9ca41f202ee8cf3f3c4 |
+| Deploy actual | https://app.netlify.com/projects/domus-fuego-sitio/deploys/6b05b1cb2c6a5153c15b166c |
 | Logs de Functions | https://app.netlify.com/projects/domus-fuego-sitio/logs/functions |
 | Repositorio en GitHub | https://github.com/KiddoMaki/domus-fuego-sitio |
 | Neon Console | https://console.neon.tech/ — proyecto `empty-voice-61657813`, base `domus_fuego`, rama `production` |
@@ -30,20 +30,21 @@ public/                 Vista (SPA + panel)
   index.html            Esencia, carta, reservas, login e historial
   admin.html            Panel administrativo (UI del repo domus-admin, conectada a /api/admin)
   assets/styles.css     Tema público (oscuro/dorado, contraste AA)
-  assets/admin.css      Tema del panel
+  assets/admin.css      Tema del panel (comboboxes, catalogadores y accesibilidad)
   js/app.js             Consume /api/*; redirige a /admin.html si el rol es ADMINISTRADOR
-  js/admin.js           Carga datos reales del panel y gestiona altas/ediciones/bajas
+  js/admin.js           Carga datos reales, CRUD por módulo, comboboxes FK y unidades por producto
 src/                    Backend en capas (JavaScript)
   routes/               Rutas Express: /api/products, /orders, /reservations, /auth, /admin
   controllers/          Traducen req/res hacia servicios
   services/             Reglas de negocio y traducción de errores HTTP
-  models/               Consultas Drizzle (incluye admin.model.js con acceso a 35 tablas)
+  models/               Consultas Drizzle (admin.model.js accede a 38 tablas; resuelve FK y opciones)
   database/             connection.js (pool Neon) + schema.js (esquema Drizzle)
   middleware/           requestId, logs, CORS, sanitize, validate, paginate, JWT, roles, errores
   domain/               Reglas puras (OrderBuilder)
 netlify/functions/      Adaptadores delgados: api.mjs (catch-all /api/*)
 db/migrations/          002_carta_fields.sql, 003_auth.sql, 005_fix_identity_sequences.sql,
                         006_audit_log.sql (bitácora) y 007_audit_log_timestamptz.sql (hora local)
+                         y 008_item_unidades_logica.sql (unidades por producto con conversión)
 tests/                  node --test (14 pruebas)
 ```
 
@@ -54,6 +55,21 @@ Mapa al esquema DOMUS:
 - Reserva = `reserva` + asignación automática de `mesa` (capacidad ≥ comensales, sin solape con
   reservas pendientes/confirmadas en la misma fecha y hora). Sin disponibilidad → **409**.
 - Sin tabla de reseñas: `DOMUS.sql` no la incluye, así que **no** hay reseñas (no se inventó DDL).
+
+### Panel: comboboxes, catálogos y unidades
+
+- Los formularios del panel son genéricos pero los campos de relación (proveedor, cliente, mesa,
+  producto, presentación, unidad, usuario, rol, caja, receta, etc.) se muestran como **comboboxes**
+  con registros reales de la base. La etiqueta se toma de `nombre`, `numero`, `codigo_lote`,
+  `descripcion`, etc.; el valor enviado es la llave foránea numérica.
+- Cada módulo tiene tarjetas de catálogos con CRUD completo (proveedores, productos, materiales,
+  unidades, roles, usuarios, mesas, recetas, caja, gastos…). Además existe la pestaña
+  **Catálogos y Tablas** con todas las tablas administrables y un filtro por nombre.
+- `008_item_unidades_logica.sql` agrega a `item` las unidades de compra/venta y calcula los factores
+  desde `unidad_medida.factor_base` mediante el trigger `trg_item_calcular_factores`:
+  `factor = factor_base(unidad) / factor_base(unidad_base)` (1 kg = 1000 und, 1 caja = 1 und,
+  1 L = 1000 und). La vista `vw_item_unidades` y la función `fn_convertir_unidad(item, desde, hasta, cantidad)`
+  exponen esa lógica. La carta pública (8 ítems, 5 categorías, 8 presentaciones, 8 precios) no cambió.
 
 ## API de administración (Postman)
 
@@ -78,9 +94,10 @@ Todas requieren `Authorization: Bearer <token>` y rol `ADMINISTRADOR` (obtenido 
 | GET | `/api/admin/cash` | Sesiones de caja |
 | GET | `/api/admin/audit` | Métricas reales del esquema en Neon |
 | GET | `/api/admin/logs` | Bitácora real de acciones del panel (`auditoria_log`) |
-| GET | `/api/admin/tables` | Listado de tablas administrables y su PK |
-| GET | `/api/admin/data/:table` / `.../schema` / `.../:id` | Consulta genérica de tablas permitidas |
+| GET | `/api/admin/tables` (o `/api/admin/data`) | Listado de tablas administrables y su PK |
+| GET | `/api/admin/data/:table` / `.../schema` / `.../:id` | Consulta genérica de tablas permitidas. El `schema` incluye, para cada FK, la tabla referida y sus opciones `{value,label}` para comboboxes |
 | POST / PATCH / DELETE | `/api/admin/data/:table[/:id]` | Altas, ediciones y bajas genéricas |
+| GET | `/api/admin/item-unidades` | Productos con unidad base/compra/venta y factores calculados (`vw_item_unidades`) |
 
 ## Uso local
 
@@ -90,6 +107,7 @@ npm install
 npm run dev        # netlify dev → http://localhost:8888
 npm run dev:api    # API Express directa → http://localhost:3000/api
 npm test           # 14 pruebas
+npm run migrate -- db/migrations/008_item_unidades_logica.sql  # migración de unidades (idempotente)
 npm run seed:operativo  # datos operativos base en Neon (no toca la carta)
 npm run seed:volumen    # volumen adicional idempotente (prefijo VOL2-, no toca la carta)
 ```
@@ -132,9 +150,14 @@ amplios en móvil.
 - Local: login admin/cliente, `/api/admin/*` con rol admin (200), cliente sin permiso (403),
   CRUD genérico de `mesa` (crear/editar/borrar) y datos de prueba eliminados.
 - Producción: `/`, `/admin.html`, `/js/admin.js`, `/assets/admin.css`, `/js/app.js` y `/assets/styles.css`
-  responden 200; todos los `/api/admin/*` (overview, inventario, compras, producción, ventas,
-  finanzas, auditoría, reservas, pedidos, usuarios y mesas) responden 200 con token de administrador;
-  sin token responde 401. Deploy: `6b05a9ca41f202ee8cf3f3c4`.
+  responden 200; todos los `/api/admin/*` (overview, item-unidades, data, tables, inventario,
+  compras, producción, ventas, finanzas, auditoría, logs, reservas, pedidos y usuarios) responden 200
+  con token de administrador; sin token responde 401. Deploy: `6b05b1cb2c6a5153c15b166c`.
+- Comboboxes verificados en `/api/admin/data/item/schema`: `id_categoria`, `id_unidad_base`,
+  `id_unidad_compra` e `id_unidad_venta` llegan con opciones reales; `factor_compra` y
+  `factor_venta` se marcan como calculados y no se envían desde el formulario.
+- Unidades verificadas en `vw_item_unidades`: cortes 1 kg = 1000 und, platos 1 caja = 1 und,
+  bebida 1 L = 1000 und; `fn_convertir_unidad` y el trigger recalculan los factores al editar.
 - Volumen cargado en Neon (idempotente, `db/seed_volumen.mjs`): 54 clientes, 14 mesas, 16
   proveedores, 42 órdenes de compra, 37 lotes, 128 movimientos de inventario, 40 órdenes de
   producción, 87 reservas, 82 pedidos, 69 ventas, 92 pagos, 57 gastos y 164 asientos contables.
