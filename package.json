@@ -9,7 +9,8 @@
     "build": "node -e \"process.stdout.write('static\\n')\"",
     "test": "node --test",
     "seed": "node db/seed.mjs",
-    "seed:operativo": "node db/seed_operativo.mjs"
+    "seed:operativo": "node db/seed_operativo.mjs",
+    "seed:volumen": "node db/seed_volumen.mjs"
   },
   "dependencies": {
     "@neon/config": "^1.14.6",

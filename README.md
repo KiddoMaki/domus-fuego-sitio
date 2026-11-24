@@ -24,7 +24,8 @@ src/                    Backend en capas (JavaScript)
   middleware/           requestId, logs, CORS, sanitize, validate, paginate, JWT, roles, errores
   domain/               Reglas puras (OrderBuilder)
 netlify/functions/      Adaptadores delgados: api.mjs (catch-all /api/*)
-db/migrations/          002_carta_fields.sql y 003_auth.sql (roles y usuario KIDDO)
+db/migrations/          002_carta_fields.sql, 003_auth.sql, 005_fix_identity_sequences.sql,
+                        006_audit_log.sql (bitácora) y 007_audit_log_timestamptz.sql (hora local)
 tests/                  node --test (14 pruebas)
 ```
 
@@ -71,7 +72,8 @@ npm install
 npm run dev        # netlify dev → http://localhost:8888
 npm run dev:api    # API Express directa → http://localhost:3000/api
 npm test           # 14 pruebas
-npm run seed:operativo  # datos operativos de prueba en Neon (no toca la carta)
+npm run seed:operativo  # datos operativos base en Neon (no toca la carta)
+npm run seed:volumen    # volumen adicional idempotente (prefijo VOL2-, no toca la carta)
 ```
 
 Cuentas de prueba: administrador `kiddo@domusfuego.local` / `1234` (rol `ADMINISTRADOR`),
@@ -114,9 +116,13 @@ amplios en móvil.
 - Producción: `/`, `/admin.html`, `/js/admin.js`, `/assets/admin.css`, `/js/app.js` y `/assets/styles.css`
   responden 200; todos los `/api/admin/*` (overview, inventario, compras, producción, ventas,
   finanzas, auditoría, reservas, pedidos, usuarios y mesas) responden 200 con token de administrador;
-  sin token responde 401. Deploy: `6b05a383dc91f992cc190d28`.
+  sin token responde 401. Deploy: `6b05a9ca41f202ee8cf3f3c4`.
+- Volumen cargado en Neon (idempotente, `db/seed_volumen.mjs`): 54 clientes, 14 mesas, 16
+  proveedores, 42 órdenes de compra, 37 lotes, 128 movimientos de inventario, 40 órdenes de
+  producción, 87 reservas, 82 pedidos, 69 ventas, 92 pagos, 57 gastos y 164 asientos contables.
 - Auditoría: `/api/admin/logs` devuelve la bitácora real; los cambios de estado/CRUD del panel
-  quedan registrados con usuario, módulo, detalle e IP.
+  quedan registrados con usuario, módulo, detalle e IP. `fecha` es `timestamptz`: se muestra en la
+  hora local del navegador (p. ej. 10:03 a. m. en Ecuador en vez de 15:03 UTC).
 - Carta sin cambios: 8 ítems, 5 categorías, 8 presentaciones y 8 precios vigentes.
 
 ## Documentación de marca / negocio
