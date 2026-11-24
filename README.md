@@ -5,6 +5,24 @@
 > `DomusDBs.sql`. Productos y precios son la carta cargada en la BD. Sin pagos en línea
 > (las ventas se cierran en caja, tablas `caja_sesion`/`venta`).
 
+## Enlaces rápidos
+
+| Recurso | Enlace |
+| --- | --- |
+| Sitio público (Netlify) | https://domus-fuego-sitio.netlify.app/ |
+| Panel administrativo | https://domus-fuego-sitio.netlify.app/admin.html |
+| API pública (base `/api`) | https://domus-fuego-sitio.netlify.app/api/products |
+| Health check de la API | https://domus-fuego-sitio.netlify.app/api/health |
+| API Express local | http://localhost:3000/api (`npm run dev:api`) |
+| Proyecto en Netlify | https://app.netlify.com/projects/domus-fuego-sitio |
+| Deploy actual | https://app.netlify.com/projects/domus-fuego-sitio/deploys/6b05a9ca41f202ee8cf3f3c4 |
+| Logs de Functions | https://app.netlify.com/projects/domus-fuego-sitio/logs/functions |
+| Repositorio en GitHub | https://github.com/KiddoMaki/domus-fuego-sitio |
+| Neon Console | https://console.neon.tech/ — proyecto `empty-voice-61657813`, base `domus_fuego`, rama `production` |
+| Documentación de Neon | https://neon.com/docs |
+| Documentación de Express | https://expressjs.com/ |
+| Referencia de la API de administración | [ver más abajo](#api-de-administración-postman) |
+
 ## Arquitectura (n-capas: routes → controllers → services → models → database)
 
 ```text
