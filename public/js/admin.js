@@ -875,8 +875,52 @@ function renderMasterView(table) {
 function detailToolbar(title, subtitle) {
     return `<div class="detail-toolbar">
         <div><strong>${title}</strong>${subtitle ? `<span class="catalog-count">${subtitle}</span>` : ''}</div>
-        <button type="button" class="btn-red" id="detailClose">Cerrar detalle</button>
+        <button type="button" class="btn-red" id="detailClose">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i> Cerrar detalle y volver
+        </button>
     </div>`;
+}
+
+// Al abrir el detalle se baja hasta él y se le entrega el foco; al cerrar se
+// regresa al botón que lo abrió para no perder el lugar dentro de la tabla.
+function scrollMotion() {
+    return document.documentElement.classList.contains('a11y-reduced') ? 'auto' : 'smooth';
+}
+
+function revealElement(node, focus = false) {
+    if (!node) return;
+    if (typeof node.scrollIntoView === 'function') {
+        node.scrollIntoView({ behavior: scrollMotion(), block: 'start' });
+    }
+    if (focus) {
+        if (node.tabIndex < 0) node.tabIndex = -1;
+        try { node.focus({ preventScroll: true }); }
+        catch { node.focus(); }
+    }
+}
+
+function detailTriggerFor(id) {
+    if (id === null || id === undefined) return null;
+    return [...document.querySelectorAll('#tableExplorerTable [data-detail], #tableExplorerTable [data-product-detail]')]
+        .find((button) => String(button.dataset.detailId ?? button.dataset.productDetail) === String(id)) || null;
+}
+
+function revealDetail() {
+    const host = document.getElementById('tableExplorerDetail');
+    host?.setAttribute('aria-label', 'Detalle del registro seleccionado');
+    revealElement(host, true);
+}
+
+function closeDetail() {
+    const host = document.getElementById('tableExplorerDetail');
+    const trigger = detailTriggerFor(currentDetail?.id);
+    if (host) host.innerHTML = '';
+    currentDetail = null;
+    revealElement(trigger || document.getElementById('tableExplorerCard'), Boolean(trigger));
+}
+
+function wireDetailClose(host) {
+    host.querySelector('#detailClose')?.addEventListener('click', closeDetail);
 }
 
 function movementDocument(row) {
@@ -967,10 +1011,8 @@ function showMasterDetail(table, id) {
             </div>${inner}</div>`;
     });
     host.innerHTML = html;
-    host.querySelector('#detailClose')?.addEventListener('click', () => {
-        host.innerHTML = '';
-        currentDetail = null;
-    });
+    wireDetailClose(host);
+    revealDetail();
 }
 
 function showProductDetail(id) {
@@ -978,10 +1020,8 @@ function showProductDetail(id) {
     if (!host) return;
     currentDetail = { type: 'product', id };
     host.innerHTML = detailToolbar('Ficha del producto', labelFor('item', id)) + productDetailHtml(id);
-    host.querySelector('#detailClose')?.addEventListener('click', () => {
-        host.innerHTML = '';
-        currentDetail = null;
-    });
+    wireDetailClose(host);
+    revealDetail();
 }
 
 function factsHtml(pairs) {

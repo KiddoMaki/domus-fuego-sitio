@@ -15,7 +15,7 @@
 | Health check de la API | https://domus-fuego-sitio.netlify.app/api/health |
 | API Express local | http://localhost:3000/api (`npm run dev:api`) |
 | Proyecto en Netlify | https://app.netlify.com/projects/domus-fuego-sitio |
-| Deploy actual | https://app.netlify.com/projects/domus-fuego-sitio/deploys/6b05bcc806d9746d3c58f57b |
+| Deploy actual | https://app.netlify.com/projects/domus-fuego-sitio/deploys/6b05be420319ce1e26a48a7a |
 | Logs de Functions | https://app.netlify.com/projects/domus-fuego-sitio/logs/functions |
 | Repositorio en GitHub | https://github.com/KiddoMaki/domus-fuego-sitio |
 | Neon Console | https://console.neon.tech/ — proyecto `empty-voice-61657813`, base `domus_fuego`, rama `production` |
@@ -128,7 +128,9 @@ sus vistas y operaciones. El menú incluye once módulos más **Cargues de Inven
 y Mesas). Las entidades cabecera-detalle ya no se muestran como tablas sueltas: *Órdenes de compra*,
 *Recepciones*, *Reservas*, *Pedidos*, *Recetas*, *Costos de recetas* y *Órdenes de producción* abren
 una cabecera legible (proveedor, cliente, mesa, fecha, estado, totales) y **Ver detalle** muestra sus
-líneas y documentos relacionados. El botón *Nueva línea* del detalle precarga la llave foránea.
+líneas y documentos relacionados. Al abrirlo, la página baja hasta el detalle y le entrega el foco;
+**Cerrar detalle y volver** regresa al botón de esa fila. Con *reducir movimiento* el desplazamiento
+es inmediato. El botón *Nueva línea* del detalle precarga la llave foránea.
 **Proveedores, clientes, mesas y unidades** siguen siendo CRUD independientes. Ninguna vista muestra
 identificadores: las relaciones se resuelven a nombres reales y los IDs solo quedan en la base y en
 los `data-id` internos de los botones.
@@ -178,7 +180,7 @@ independientes) con filtro; las siete tablas de detalle solo se consultan desde 
 - Producción: `/`, `/admin.html`, `/js/admin.js`, `/assets/admin.css`, `/js/app.js` y `/assets/styles.css`
   responden 200; todos los `/api/admin/*` (overview, item-unidades, data, tables, inventario,
   compras, producción, ventas, finanzas, auditoría, logs, reservas, pedidos y usuarios) responden 200
-  con token de administrador; sin token responde 401. Deploy: `6b05bcc806d9746d3c58f57b`.
+  con token de administrador; sin token responde 401. Deploy: `6b05be420319ce1e26a48a7a`.
 - Menú lateral verificado: 12 módulos desplegables y 81 opciones; `Compras & Proveedores` abre
   proveedores, órdenes de compra y recepciones (cada una con su detalle). Se verificaron con jsdom
   las siete cabeceras: 42 OC, 30 recepciones, 87 reservas, 82 pedidos, 40 OP, 8 costos y 128

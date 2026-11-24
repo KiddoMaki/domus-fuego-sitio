@@ -824,6 +824,9 @@
     border-radius: 6px; background: rgba(221,168,0,.08); color: var(--color-white);
     font-size: 13px;
 }
+#tableExplorerDetail { scroll-margin-top: 18px; }
+#tableExplorerTable [data-detail],
+#tableExplorerTable [data-product-detail] { scroll-margin-top: 18px; }
 .detail-card { margin-top: 14px; }
 .detail-facts {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
